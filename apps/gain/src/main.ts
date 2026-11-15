@@ -3,6 +3,7 @@ import './gain.css';
 import { createApp, createPostcard, getLanguage, h, markComplete, registerScripture, sharePostcard, t, toast, webChapterUrl } from '@delivered/core';
 import { Chains } from './chapters/chains';
 import { LedgerChapter } from './chapters/ledger';
+import { Letter } from './chapters/letter';
 import { Threshold } from './chapters/threshold';
 import { scripture } from './scripture';
 import { registerGainStrings } from './strings';
@@ -16,7 +17,7 @@ const ctx = await createApp<GainCtx>({
   title: 'GAIN',
   reverb: 'smallCell',
   transition: 'dissolve',
-  chapters: [new Threshold(), new LedgerChapter(), new Chains()],
+  chapters: [new Threshold(), new LedgerChapter(), new Chains(), new Letter()],
   setup: (c, progress) => {
     c.world = new World(c);
     progress(1);

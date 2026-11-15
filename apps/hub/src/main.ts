@@ -147,9 +147,10 @@ class Hub extends Chapter {
     const fov = 36;
     const halfW = spacing + ARCH.width / 2 + (portrait ? 0.3 : 1.6);
     const tan = Math.tan((fov * Math.PI) / 360);
-    // Portals take about 38% of the height on desktop and sit below the wordmark.
-    const dist = Math.max(halfW / (tan * aspect), ARCH.height / 0.38 / (2 * tan));
-    const lookY = ARCH.height * 0.5 + 2 * dist * tan * (portrait ? 0.07 : 0.105);
+    // Portals take about a third of the height on desktop and sit between the wordmark and
+    // their labels, clear of the footer.
+    const dist = Math.max(halfW / (tan * aspect), ARCH.height / 0.34 / (2 * tan));
+    const lookY = ARCH.height * 0.5 + 2 * dist * tan * (portrait ? 0.07 : 0.035);
     rig.setFov(fov);
     if (!this.leaving) rig.snapTo(new Vector3(0, lookY - 0.1, dist), new Vector3(0, lookY, 0));
   }

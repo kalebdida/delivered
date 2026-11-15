@@ -154,7 +154,7 @@ function buildPanel(ctx: CoreContext): void {
     'Interface',
     act('scripture', () => void ui.scripture.show({ ref: 'Romans 7:24', duration: 6, position: 'center', original: { text: 'τίς με ῥύσεται;', lang: 'grc' } })),
     act('scripture he', () => void ui.scripture.show({ ref: 'Deuteronomy 33:27', duration: 7, position: 'lower', original: { text: 'וּמִתַּחַת זְרֹעֹת עוֹלָם', lang: 'he' } })),
-    act('chapter card', () => void ui.card.show({ word: 'θέλω', lang: 'grc', translit: 'thelō', english: 'I want', ref: 'Romans 7:18', number: 1 })),
+    act('chapter card', () => void ui.card.show({ word: 'θέλω', lang: 'grc', translit: 'thelō', english: 'I want', ref: 'Romans 7:19', number: 1 })),
     act('whisper', () => ui.whisper.show(t('core.whisper.hold'), { duration: 4 })),
     act('hud', () => {
       ui.hud.set('top-left', 'attempts: 7');

@@ -6,14 +6,11 @@ import {
 } from 'three';
 import {
   Chapter, Dust, allComplete, button, createApp, formatRef, getLanguage, glsl, h, haptic, isComplete, markSvg, onLanguageChange,
-  openDialog, passage, prefersReducedMotion, registerScripture, setArrivalColor, t, type CoreContext, type SoundHandle,
+  openDialog, passage, prefersReducedMotion, setArrivalColor, t, type CoreContext, type SoundHandle,
 } from '@delivered/core';
 import { ARCH, PORTALS, Portal } from './portals';
 
-// The hub's intro line is a quotation from inside Romans 7:24, registered so it is verified.
-registerScripture([
-  { ref: 'Romans 7:24', lang: 'en', translation: 'WEB', text: 'Who will deliver me?', partial: true, verified: true, source: 'https://ebible.org/Scriptures/eng-web_usfm.zip' },
-]);
+// The intro line quotes from inside Romans 7:24; the hub shows it as a question.
 const INTRO = { en: 'Who will deliver me?', am: 'ማን ያድነኛል?' } as const;
 
 const AURORA_FRAG = /* glsl */ `

@@ -13,7 +13,7 @@ import type { AppId } from './safety';
 import { createStore, type Store } from './storage';
 import { TransitionEffect, type TransitionType } from './transitions';
 import {
-  ChapterCard, Chrome, Cursor, EndCard, HUD, LoadingScreen, ScriptureOverlay, Settings, Whisper, bindUISounds, getUIRoot,
+  ChapterCard, Chrome, Cursor, EndCard, HUD, LoadingScreen, ScriptureOverlay, Settings, Whisper, bindUISounds, getUIRoot, takeArrivalColor,
 } from './ui';
 
 /** Everything a chapter can reach. Passed to `Chapter.enter(ctx)`. */
@@ -97,7 +97,7 @@ export async function createApp<Ctx extends CoreContext = CoreContext>(opts: App
   const container = opts.container ?? document.body;
   document.body.classList.add('dl-stage');
   document.documentElement.dataset.room = opts.appId;
-  const loader = new LoadingScreen({ title: opts.title, background: opts.loaderColor });
+  const loader = new LoadingScreen({ title: opts.title, background: opts.loaderColor ?? takeArrivalColor() ?? undefined });
   loader.setProgress(0.08);
 
   const canvas = document.createElement('canvas');

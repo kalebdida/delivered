@@ -1,4 +1,14 @@
-import { DataTexture, FloatType, LinearFilter, RGBAFormat } from 'three';
+import {
+  Color,
+  CylinderGeometry,
+  DataTexture,
+  FloatType,
+  Mesh,
+  NearestFilter,
+  RGBAFormat,
+  ShaderMaterial,
+  Vector3,
+} from 'three';
 
 export interface VerletOptions {
   /** Constraint relaxation passes per step (default 6). More is stiffer. */
@@ -163,7 +173,8 @@ export class Verlet {
     const height = Math.ceil(this.count / width);
     const data = new Float32Array(width * height * 4);
     this.texture = new DataTexture(data, width, height, RGBAFormat, FloatType);
-    this.texture.minFilter = this.texture.magFilter = LinearFilter;
+    // Nearest: float textures cannot be linearly filtered on every phone.
+    this.texture.minFilter = this.texture.magFilter = NearestFilter;
     this.updateTexture();
     return this.texture;
   }
@@ -232,4 +243,85 @@ export function createCloth(
     }
   }
   return v;
+}
+
+export interface RopeMeshOptions {
+  radius?: number;
+  color?: string;
+  /** Rim light color (default bone). */
+  rimColor?: string;
+  /** Direction TO the key light. */
+  lightDirection?: Vector3;
+  radialSegments?: number;
+}
+
+/**
+ * A tube that follows a Verlet rope entirely on the GPU: the vertex shader reads point positions
+ * from the rope's DataTexture, so the CPU only uploads one small texture per frame.
+ *
+ * ```ts
+ * const rope = createRope([0, 3, 0], [2, 3, 0], 24);
+ * const tube = new RopeMesh(rope, { radius: 0.02, color: '#8E8A93' });
+ * scene.add(tube.mesh);
+ * loop.onFrame(() => tube.update());
+ * ```
+ */
+export class RopeMesh {
+  readonly mesh: Mesh;
+  private mat: ShaderMaterial;
+
+  constructor(private readonly rope: Verlet, opts: RopeMeshOptions = {}) {
+    const tex = rope.toTexture();
+    this.mat = new ShaderMaterial({
+      uniforms: {
+        uPoints: { value: tex },
+        uCount: { value: rope.count },
+        uRadius: { value: opts.radius ?? 0.02 },
+        uColor: { value: new Color(opts.color ?? '#8E8A93') },
+        uRim: { value: new Color(opts.rimColor ?? '#F7F3EA') },
+        uLight: { value: opts.lightDirection ?? new Vector3(0.4, 0.8, 0.4).normalize() },
+      },
+      vertexShader: /* glsl */ `
+        uniform sampler2D uPoints; uniform float uCount, uRadius;
+        varying vec3 vN; varying vec3 vV;
+        vec3 P(float i){ return texture2D(uPoints, vec2((clamp(i, 0.0, uCount - 1.0) + 0.5) / uCount, 0.5)).xyz; }
+        void main(){
+          float i = floor(uv.y * (uCount - 1.0) + 0.5);
+          vec3 c = P(i);
+          vec3 tan = normalize(P(i + 1.0) - P(i - 1.0) + vec3(0.0, 1e-5, 0.0));
+          vec3 ref = abs(tan.y) > 0.98 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0);
+          vec3 n = normalize(cross(tan, ref));
+          vec3 b = cross(tan, n);
+          float a = uv.x * 6.2831853;
+          vec3 dir = cos(a) * n + sin(a) * b;
+          vec4 mv = modelViewMatrix * vec4(c + dir * uRadius, 1.0);
+          vN = normalMatrix * dir; vV = -mv.xyz;
+          gl_Position = projectionMatrix * mv;
+        }`,
+      fragmentShader: /* glsl */ `
+        uniform vec3 uColor, uRim, uLight; varying vec3 vN; varying vec3 vV;
+        void main(){
+          vec3 n = normalize(vN); vec3 v = normalize(vV);
+          vec3 l = normalize((viewMatrix * vec4(uLight, 0.0)).xyz);
+          float d = max(dot(n, l), 0.0) * 0.85 + 0.15;
+          float rim = pow(1.0 - max(dot(n, v), 0.0), 3.0);
+          gl_FragColor = vec4(uColor * d + uRim * rim * 0.35, 1.0);
+        }`,
+    });
+    const geo = new CylinderGeometry(1, 1, 1, opts.radialSegments ?? 8, rope.count - 1, true);
+    this.mesh = new Mesh(geo, this.mat);
+    this.mesh.frustumCulled = false;
+    this.mesh.name = 'RopeMesh';
+  }
+
+  /** Upload the rope's current points. Call once per frame. */
+  update(): void {
+    this.rope.updateTexture();
+  }
+
+  dispose(): void {
+    this.mesh.geometry.dispose();
+    this.mat.dispose();
+    this.mesh.removeFromParent();
+  }
 }

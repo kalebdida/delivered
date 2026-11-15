@@ -106,6 +106,18 @@ importers:
         specifier: ^2.0.5
         version: 2.0.5
 
+  packages/core/demo:
+    dependencies:
+      '@delivered/core':
+        specifier: workspace:*
+        version: link:..
+      gsap:
+        specifier: ^3.15.1
+        version: 3.15.1
+      three:
+        specifier: ^0.187.0
+        version: 0.187.0
+
 packages:
 
   '@cacheable/memory@2.2.0':

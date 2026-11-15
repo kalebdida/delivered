@@ -41,7 +41,7 @@ void main(){
   float streak = 0.55 + 0.45 * vnoise(vec2(vUv.x * 26.0 + uTime * 0.03, vUv.y * 1.5 - uTime * 0.02));
   float fine = 0.8 + 0.2 * vnoise(vec2(vUv.x * 90.0 - uTime * 0.05, vUv.y * 4.0));
   // Fade at the source and toward the far end.
-  float along = smoothstep(0.0, 0.08, 1.0 - vUv.y) * pow(vUv.y, 0.75);
+  float along = smoothstep(0.0, 0.08, 1.0 - vUv.y) * mix(0.18, 1.0, pow(vUv.y, 0.6));
   float a = edge * streak * fine * along * uIntensity;
   gl_FragColor = vec4(uColor * a + dither(gl_FragCoord.xy), a);
 }`;
@@ -91,7 +91,7 @@ export class LightShaft {
       depthWrite: false,
       side: DoubleSide,
       blending: AdditiveBlending,
-      uniforms: { uColor: { value: color }, uIntensity: { value: (opts.intensity ?? 0.5) * 0.5 }, uTime: { value: 0 } },
+      uniforms: { uColor: { value: color }, uIntensity: { value: opts.intensity ?? 0.5 }, uTime: { value: 0 } },
       vertexShader: `varying vec3 vNormalV; varying vec3 vViewV; varying vec2 vUv; varying vec3 vWorld;
         void main(){ vUv = uv; vec4 mv = modelViewMatrix * vec4(position, 1.0); vNormalV = normalMatrix * normal; vViewV = -mv.xyz;
         vWorld = (modelMatrix * vec4(position, 1.0)).xyz; gl_Position = projectionMatrix * mv; }`,
@@ -134,11 +134,11 @@ export class LightShaft {
 
   /** Brightness 0..1+ (tween this to "open" the beam). */
   set intensity(v: number) {
-    this.beamMat.uniforms.uIntensity!.value = v * 0.5;
+    this.beamMat.uniforms.uIntensity!.value = v;
     if (this.moteMat) this.moteMat.uniforms.uIntensity!.value = v;
   }
   get intensity(): number {
-    return this.beamMat.uniforms.uIntensity!.value * 2;
+    return this.beamMat.uniforms.uIntensity!.value;
   }
   set color(hex: string) {
     (this.beamMat.uniforms.uColor!.value as Color).set(hex);

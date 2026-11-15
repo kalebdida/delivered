@@ -1,6 +1,30 @@
 import { t } from '../i18n';
 import { button, h, wait } from './dom';
 
+const ARRIVAL_KEY = 'delivered:core:arrival';
+
+/**
+ * Hub-to-room hand-off: the hub stores the portal's light color before navigating, and the room's
+ * loader (or placeholder) starts from that same color, so the visitor never sees a blank page.
+ */
+export function setArrivalColor(hex: string): void {
+  try {
+    sessionStorage.setItem(ARRIVAL_KEY, hex);
+  } catch {
+    /* storage blocked: the room just starts from ink */
+  }
+}
+/** Read (and clear) the color the hub left behind. Null when the visitor did not come through a portal. */
+export function takeArrivalColor(): string | null {
+  try {
+    const v = sessionStorage.getItem(ARRIVAL_KEY);
+    sessionStorage.removeItem(ARRIVAL_KEY);
+    return v && /^#[0-9a-f]{6}$/i.test(v) ? v : null;
+  } catch {
+    return null;
+  }
+}
+
 export interface LoadingOptions {
   /** The room title that assembles letter by letter. */
   title: string;

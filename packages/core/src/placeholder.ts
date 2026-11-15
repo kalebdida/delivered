@@ -6,6 +6,7 @@ import { roomPalettes, type RoomId } from './tokens';
 import { button, h, nextFrame, splitLines } from './ui/dom';
 import { markSvg } from './ui/icons';
 import { Cursor } from './ui/cursor';
+import { takeArrivalColor } from './ui/loading';
 
 export interface PlaceholderOptions {
   room: Exclude<RoomId, 'hub'>;
@@ -24,6 +25,15 @@ export function mountPlaceholder(opts: PlaceholderOptions): void {
   const pal = roomPalettes[opts.room];
   document.documentElement.dataset.room = opts.room;
   document.body.classList.add('dl-stage');
+
+  // Arriving through a hub portal: start from the portal's light and let the room fade in from it.
+  const arrival = takeArrivalColor();
+  if (arrival) {
+    const veil = h('div', { 'aria-hidden': 'true', style: `position:fixed;inset:0;z-index:90;background:${arrival};transition:opacity 1600ms cubic-bezier(0.76,0,0.24,1);pointer-events:none` });
+    document.body.appendChild(veil);
+    setTimeout(() => (veil.style.opacity = '0'), 120);
+    setTimeout(() => veil.remove(), 1900);
+  }
 
   const canvas = h('canvas', { class: 'dl-canvas', 'aria-hidden': 'true' });
   document.body.appendChild(canvas);

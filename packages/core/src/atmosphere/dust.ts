@@ -6,7 +6,7 @@ export interface DustOptions {
   /** Half-size of the volume the dust fills, centred on the object. */
   bounds?: [number, number, number];
   color?: string;
-  /** Point size in pixels at 1 m. */
+  /** Point size in pixels at 10 m from the camera (default 3). */
   size?: number;
   /** Drift speed. */
   speed?: number;
@@ -48,7 +48,7 @@ export class Dust {
       depthWrite: false,
       blending: AdditiveBlending,
       uniforms: {
-        uTime: { value: 0 }, uColor: { value: new Color(opts.color ?? '#F5C76B') }, uSize: { value: opts.size ?? 10 },
+        uTime: { value: 0 }, uColor: { value: new Color(opts.color ?? '#F5C76B') }, uSize: { value: opts.size ?? 3 },
         uSpeed: { value: opts.speed ?? 1 }, uOpacity: { value: opts.opacity ?? 0.7 },
         uBounds: { value: new Vector3(b[0], b[1], b[2]) },
         uPixelRatio: { value: Math.min(typeof devicePixelRatio === 'number' ? devicePixelRatio : 1, 2) },
@@ -66,7 +66,7 @@ export class Dust {
           vec4 mv = modelViewMatrix * vec4(p, 1.0);
           gl_Position = projectionMatrix * mv;
           float d = max(-mv.z, 0.2);
-          gl_PointSize = uSize * (0.35 + aSeed.z) * uPixelRatio / d;
+          gl_PointSize = uSize * (0.35 + aSeed.z) * uPixelRatio * 10.0 / d;
           vec3 e = abs(p) / uBounds;
           float edge = 1.0 - smoothstep(0.75, 1.0, max(e.x, max(e.y, e.z)));
           float tw = 0.45 + 0.55 * sin(t * (0.5 + aSeed.x) + aSeed.w * 80.0);

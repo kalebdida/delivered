@@ -136,8 +136,12 @@ uniform float uSaturation, uVignette, uVignetteSoft, uGrain, uFade, uLetter;
 uniform vec3 uFadeColor, uVignetteColor;
 float _ign(vec2 p){ return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715)))); }
 float _h(vec2 p){ vec3 p3 = fract(vec3(p.xyx) * .1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
+vec3 _toDisplay(vec3 c){ return mix(c * 12.92, 1.055 * pow(max(c, vec3(0.0)), vec3(1.0 / 2.4)) - 0.055, step(0.0031308, c)); }
+vec3 _toLinear(vec3 c){ return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c)); }
 void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor){
-  vec3 c = inputColor.rgb;
+  // The effect chain is linear; grade in display space so grain, fades and dithering are
+  // perceptually even, then hand linear back to the pass for its final sRGB encode.
+  vec3 c = _toDisplay(clamp(inputColor.rgb, 0.0, 1.0));
   float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
   c = mix(vec3(l), c, uSaturation);
   vec2 q = uv - 0.5; q.x *= mix(1.0, aspect, 0.35);
@@ -149,7 +153,7 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
   c = mix(c, uFadeColor, uFade);
   float n = _ign(px);
   c += (vec3(n, fract(n + 0.618), fract(n + 0.382)) - 0.5) / 255.0 * 1.5;
-  outputColor = vec4(clamp(c, 0.0, 1.0), inputColor.a);
+  outputColor = vec4(_toLinear(clamp(c, 0.0, 1.0)), inputColor.a);
 }`;
 
 class GradeEffect extends Effect {

@@ -21,7 +21,7 @@ export const SHOTS: Record<Shot, [Vector3, Vector3, number]> = {
   ledger: [new Vector3(0.95, 1.5, 1.35), new Vector3(-0.85, 1.25, -1.45), 50],
   beam: [new Vector3(1.6, 1.0, 1.4), new Vector3(-0.2, 1.1, -1.3), 46],
   chains: [new Vector3(-0.1, 1.15, 0.2), new Vector3(-1.55, 0.75, -1.95), 50],
-  desk: [new Vector3(-0.55, 0.95, -0.55), new Vector3(-0.75, 0.05, -1.2), 48],
+  desk: [new Vector3(-0.42, 1.12, -1.28), new Vector3(-0.76, 0.43, -2.0), 44],
   doors: [new Vector3(0, 1.55, 2.0), new Vector3(0, 1.35, -1.0), 50],
 };
 
@@ -69,10 +69,10 @@ export class World {
       if (x > BENCH.x0 && x < BENCH.x1 && z > BENCH.z0 && z < BENCH.z1 && p[o + 1]! < BENCH.height + 0.015) p[o + 1] = BENCH.height + 0.015;
       if (z < CELL.z0 + 0.02) p[o + 2] = CELL.z0 + 0.02;
     };
-    this.cellGroup.add(this.figure.group);
+    this.root.add(this.figure.group);
     this.figure.update(0);
     this.chains = [new Chain(RINGS[1], this.figure.wrist(0), 1.5), new Chain(RINGS[0], this.figure.wrist(1), 1.5)];
-    for (const c of this.chains) this.cellGroup.add(c.mesh);
+    for (const c of this.chains) this.root.add(c.mesh);
 
     // The darkness is never empty: an almost-nothing cool fill so shadows hold shape.
     this.ambient = new HemisphereLight('#33405e', '#1a130d', 0.42);
@@ -92,9 +92,18 @@ export class World {
   /** Show or hide the cell (the later chapters leave it). */
   set inCell(v: boolean) {
     this.cellGroup.visible = v;
+    // The visitor goes with the cell; a chapter outside it shows them again if it needs to.
+    this.figure.group.visible = v;
+    for (const c of this.chains) c.mesh.visible = v;
   }
   get inCell(): boolean {
     return this.cellGroup.visible;
+  }
+
+  /** Fix both chains back to their wall rings and let them settle (chapters that start seated). */
+  chainToWall(): void {
+    this.chains[0].attach(RINGS[1]);
+    this.chains[1].attach(RINGS[0]);
   }
 
   /** Cut the camera to a framing. */
@@ -133,9 +142,9 @@ export class World {
       rig.position.set(damp(rig.position.x, g.pos.x, g.lambda, dt), damp(rig.position.y, g.pos.y, g.lambda, dt), damp(rig.position.z, g.pos.z, g.lambda, dt));
       rig.target.set(damp(rig.target.x, g.look.x, g.lambda, dt), damp(rig.target.y, g.look.y, g.lambda, dt), damp(rig.target.z, g.look.z, g.lambda, dt));
     }
+    if (this.figure.group.visible) this.figure.update(dt);
     if (!this.cellGroup.visible) return;
     this.cell.update(dt);
-    this.figure.update(dt);
     // Two substeps keep the chain stiff when the wrists move quickly.
     const h = Math.min(dt, 1 / 30) / 2;
     if (h > 0) {

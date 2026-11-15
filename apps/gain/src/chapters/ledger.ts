@@ -72,6 +72,7 @@ export class LedgerChapter extends GChapter {
     this.arrived = 0;
     w.inCell = true;
     w.figure.group.position.set(SEAT.x, 0, SEAT.z);
+    w.chainToWall();
     w.figure.heading = 0;
     w.figure.sit = 1;
     w.figure.kneel = 0;

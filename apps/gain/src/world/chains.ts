@@ -61,6 +61,16 @@ export class Chain {
     this.mesh.frustumCulled = false;
   }
 
+  /** Fix the first link to a wall ring. */
+  attach(ring: Vector3): void {
+    this.rope.pin(0, [ring.x, ring.y, ring.z]);
+  }
+
+  /** Let the wall end go: the chain hangs from the wrist and drags on the floor. */
+  detach(): void {
+    this.rope.unpin(0);
+  }
+
   /** Move the free end (the wrist). */
   setEnd(p: Vector3): void {
     this.rope.pin(this.rope.count - 1, [p.x, p.y, p.z]);

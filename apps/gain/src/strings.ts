@@ -24,7 +24,7 @@ export const en = {
   'gain.cursor.drag': 'drag',
   'gain.cursor.enter': 'enter',
   'gain.chains.hint': 'drag or shake the chains',
-  'gain.chains.hintKeys': 'Space to shake the chains',
+  'gain.chains.hintKeys': 'Space to shake',
   'gain.chains.count': 'the whole palace guard: {n} / {total}',
   'gain.chains.city': 'and the brothers in the city, bolder to speak',
   'gain.letter.hint': 'drag the reed pen across the papyrus',

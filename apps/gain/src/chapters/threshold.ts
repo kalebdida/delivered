@@ -16,6 +16,7 @@ export class Threshold extends GChapter {
     this.begin(ctx);
     const w = ctx.world;
     w.inCell = true;
+    w.chainToWall();
     w.cut('still');
     w.lamp.level = w.lamp.target = 0;
     w.beam.intensity = 0.25;

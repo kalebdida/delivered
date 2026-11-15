@@ -279,11 +279,11 @@ export class NoCondemnation extends WChapter {
     const { ctx, w } = this;
     this.summitAt = this.time;
     w.movable = false;
-    w.figure.target.reach = 0.3;
+    w.figure.target.reach = 0;
     w.figure.target.head = -0.35;
     ctx.ui.whisper.hide();
     ctx.audio.chord([130.8, 196, 261.6, 329.6, 392, 523.3], { duration: 12, level: 0.4 });
-    ctx.rig.follow(w.figure.group, { offset: new Vector3(3.2, 1.2, 3.6), lookOffset: new Vector3(-1.4, 1.6, -2), spring: 'heavy' });
+    ctx.rig.follow(w.figure.group, { ...(window.innerWidth < window.innerHeight ? { offset: new Vector3(3.4, 2.4, 7.4), lookOffset: new Vector3(-1.2, 2.6, -2) } : { offset: new Vector3(3.2, 1.2, 3.6), lookOffset: new Vector3(-1.4, 1.6, -2) }), spring: 'heavy' });
     const s = this.summitAt;
     this.at(s + 0.5, () => ctx.postfx.fadeTo('white', 0.08, 5));
     this.at(s + 1, () => void ctx.ui.scripture.show({ ref: 'Romans 8:1', position: 'lower', duration: 7.5 }));

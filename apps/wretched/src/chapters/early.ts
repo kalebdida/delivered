@@ -13,7 +13,7 @@ const ASH_DUST = new Color('#9A968F').multiplyScalar(0.5);
 // -------------------------------------------------------------------------------------------------
 export class Threshold extends WChapter {
   readonly id = 'threshold';
-  override keyMomentAt = 12;
+  override keyMomentAt = 10.5;
   override transitionIn = 'fade' as const;
 
   async enter(ctx: WretchedCtx): Promise<void> {

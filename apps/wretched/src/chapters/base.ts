@@ -54,7 +54,7 @@ const portrait = () => window.innerWidth / Math.max(1, window.innerHeight) < 0.8
 export const VIEWS = {
   close: () => ({
     offset: portrait() ? new Vector3(1.2, 4.6, 9.6) : new Vector3(1.8, 3.6, 7.8),
-    lookOffset: new Vector3(0, 1.5, -6.5),
+    lookOffset: new Vector3(0, 1.2, -4.2),
   }),
   back: () => ({ offset: new Vector3(2.6, 1.5, -3.4), lookOffset: new Vector3(0, 0.4, 3.2) }),
   low: () => ({ offset: portrait() ? new Vector3(0.4, 1.4, 4.6) : new Vector3(1.1, 1.2, 3.6), lookOffset: new Vector3(0, 1.1, -1.5) }),

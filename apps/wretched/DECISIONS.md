@@ -73,3 +73,15 @@ CH0 has no chapter card: it *is* Romans 7:24, line by line, with τίς με ῥ
 ## Not verified here
 - Only headless Chromium with SwiftShader. Firefox, Safari iOS and Android Chrome, the 30 fps
   target on a phone, and "no memory growth over 3 full replays" are not measured yet (M6).
+
+## Process notes
+- **Git identity.** This container's git config shows an AI identity. By Kal's instruction
+  ("authored as Kaleb Dida") commits set the author and committer per command; the git config
+  itself was not changed.
+- **`pnpm-lock.yaml` changed** only because the room now lists `three` in its own package.json
+  (Vite could not resolve it otherwise).
+- **`?test` exposes the app context** as `globalThis.__wretched` for the headless playthrough checks
+  (walk, strain, run, cliff, hold). Normal visits never set it.
+- **Playthrough checks done (headless):** CH1 walk → chain snap → CH2; CH4 strain, run-away yank and
+  cliff each count an attempt; CH5 hold → CH6. Every chapter loads with zero console errors. A
+  single full uninterrupted run (and the replay memory check) was not done in software GL.

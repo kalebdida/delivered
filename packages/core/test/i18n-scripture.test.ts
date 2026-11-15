@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { getLanguage, hasString, registerStrings, setLanguage, t } from '../src/i18n';
 import { coreAm, coreEn } from '../src/i18n/strings';
-import { allScripture, formatRef, getScripture, parseRef, passage, registerScripture, verse, webChapterUrl } from '../src/scripture';
+import { allScripture, formatRef, getScripture, parseRef, partial, passage, registerScripture, verse, webChapterUrl } from '../src/scripture';
 
 describe('i18n', () => {
   it('translates, falls back to English, then to the key', () => {
@@ -54,7 +54,17 @@ describe('scripture registry', () => {
     expect(webChapterUrl('Romans', 7)).toBe('https://ebible.org/eng-web/ROM07.htm');
   });
   it('lets a room register a partial quotation', () => {
-    registerScripture([{ ref: 'Romans 7:24', lang: 'en', translation: 'WEB', text: 'Who will deliver me', partial: true, verified: true, source: 'test' }]);
-    expect(passage('Romans 7:24', 'en')).toBe('Who will deliver me');
+    const full = verse('Romans 7:24', 'en');
+    registerScripture([
+      { ref: 'Romans 7:24', lang: 'en', translation: 'WEB', text: 'What a wretched man I am!', partial: true, verified: true, source: 'test' },
+      { ref: 'Romans 7:24', lang: 'en', translation: 'WEB', text: 'Who will deliver me', partial: true, verified: true, source: 'test' },
+      { ref: 'Romans 7:24', lang: 'en', translation: 'WEB', text: 'Who will deliver me', partial: true, verified: true, source: 'test' },
+    ]);
+    expect(verse('Romans 7:24', 'en')).toBe(full);
+    expect(passage('Romans 7:24', 'en')).toBe(full);
+    expect(partial('Romans 7:24', 0, 'en')).toBe('What a wretched man I am!');
+    expect(partial('Romans 7:24', 1, 'en')).toBe('Who will deliver me');
+    expect(partial('Romans 7:24', 1, 'am')).toBe('Who will deliver me');
+    expect(() => partial('Romans 7:24', 2, 'en')).toThrow();
   });
 });

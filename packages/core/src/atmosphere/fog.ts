@@ -74,6 +74,11 @@ export class HeightFog {
       if (m.userData.heightFog || !('fog' in m) || (m as Material & { isShaderMaterial?: boolean }).isShaderMaterial) return;
       m.userData.heightFog = true;
       const prev = m.onBeforeCompile;
+      // Capture the key the material had before patching. three's default key is the source of
+      // onBeforeCompile, which after patching would be this wrapper for every material, so two
+      // materials with different prior patches would share one program.
+      const ownKey = Object.prototype.hasOwnProperty.call(m, 'customProgramCacheKey') ? m.customProgramCacheKey : null;
+      const prevKey = ownKey ? () => ownKey.call(m) : () => prev.toString();
       m.onBeforeCompile = (shader, renderer) => {
         prev?.call(m, shader, renderer);
         Object.assign(shader.uniforms, this.uniforms);
@@ -91,7 +96,7 @@ export class HeightFog {
             #endif`,
           );
       };
-      m.customProgramCacheKey = () => 'heightFog';
+      m.customProgramCacheKey = () => `${prevKey()}+heightFog`;
       m.needsUpdate = true;
     };
     if ((target as Material).isMaterial) patch(target as Material);

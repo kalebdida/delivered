@@ -141,3 +141,14 @@ Note for WRETCHED: the prompt pairs θέλω with Romans 7:18, where the Greek h
 - **The gold mark** is a descending ray meeting an open arc: light arriving from outside, into
   something held open. It is the favicon, the seal on completed portals and the loader's emblem.
 - **Chapter transitions default to `dissolve`**; rooms choose `ink` or `light` per chapter.
+
+## Core requests (merged after WRETCHED)
+- **HeightFog program keys (WRETCHED #1, fixed).** `apply` now captures the material's key before
+  patching (its own `customProgramCacheKey`, or else the source of its previous `onBeforeCompile`)
+  and appends `+heightFog`, so materials with different prior patches compile separate programs.
+- **Partial quotations (WRETCHED #3, done).** Partials are stored apart from full verses, several
+  per reference, and never replace the verse. Read them with `partial(ref, n)` or
+  `ui.scripture.show({ ref, partial: n })`.
+- **A room line in the About panel (WRETCHED #2, skipped).** The rooms have no About panel yet:
+  it lives only in the hub. Adding one to `Chrome` is a new feature (UI, i18n, focus handling),
+  not a small fix, so it waits for a later core pass.

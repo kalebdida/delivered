@@ -24,6 +24,8 @@ const AMHARIC_BOOKS: Record<string, string> = {
 };
 
 const registry = new Map<string, ScriptureEntry>();
+/** Partial quotations, kept apart so they never replace the full verse. Several may share a ref. */
+const partials = new Map<string, ScriptureEntry[]>();
 const key = (ref: string, lang: Language) => `${lang}|${ref}`;
 
 /**
@@ -32,7 +34,26 @@ const key = (ref: string, lang: Language) => `${lang}|${ref}`;
  * so `pnpm verify:scripture` can check it.
  */
 export function registerScripture(entries: readonly ScriptureEntry[]): void {
-  for (const e of entries) registry.set(key(e.ref, e.lang), e);
+  for (const e of entries) {
+    const k = key(e.ref, e.lang);
+    if (!e.partial) {
+      registry.set(k, e);
+      continue;
+    }
+    const list = partials.get(k) ?? [];
+    if (!list.some((p) => p.text === e.text)) list.push(e);
+    partials.set(k, list);
+  }
+}
+
+/**
+ * A registered partial quotation: the `index`th one registered under `ref` (in registration
+ * order). Falls back to English when the language has none. Throws when it is missing.
+ */
+export function partial(ref: string, index = 0, lang: Language = getLanguage()): string {
+  const e = partials.get(key(ref, lang))?.[index] ?? partials.get(key(ref, 'en'))?.[index];
+  if (!e) throw new Error(`Partial scripture not registered: ${ref} #${index}`);
+  return e.text;
 }
 registerScripture(scriptureEn as ScriptureEntry[]);
 registerScripture(scriptureAm as ScriptureEntry[]);
@@ -64,7 +85,7 @@ export function parseRef(ref: string): ParsedRef {
 
 /**
  * Join a verse range into one passage, e.g. `passage('Romans 7:24-25')`. An exact entry for the
- * whole reference (such as a registered partial quote) wins over joining single verses.
+ * whole reference wins over joining single verses. Partial quotations use `partial()`.
  */
 export function passage(ref: string, lang: Language = getLanguage()): string {
   const exact = registry.get(key(ref, lang));
@@ -87,7 +108,7 @@ export function formatRef(ref: string, lang: Language = getLanguage()): string {
 
 /** Every registered entry (used by the About panel and by tests). */
 export function allScripture(): ScriptureEntry[] {
-  return [...registry.values()];
+  return [...registry.values(), ...[...partials.values()].flat()];
 }
 
 /** Where to read a full chapter of the World English Bible, for the EndCard "Read" button. */

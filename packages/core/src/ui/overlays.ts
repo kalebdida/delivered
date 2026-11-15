@@ -1,5 +1,5 @@
 import { getLanguage, type Language } from '../i18n';
-import { formatRef, passage } from '../scripture';
+import { formatRef, partial, passage } from '../scripture';
 import { announce } from '../safety';
 import { getUIRoot, h, nextFrame, splitLines, wait } from './dom';
 
@@ -8,6 +8,8 @@ export interface ScriptureOptions {
   ref: string;
   /** Override the text (must still be a registered quotation; see `registerScripture`). */
   text?: string;
+  /** Show the `n`th partial quotation registered under `ref` instead of the full text. */
+  partial?: number;
   /** Original-language line shown above the verse. */
   original?: { text: string; lang: 'grc' | 'he' };
   /** Where it sits: 'center' (default), 'lower', 'upper'. */
@@ -41,7 +43,7 @@ export class ScriptureOverlay {
     await this.hide();
     if (my !== this.token) return;
     const lang = opts.lang ?? getLanguage();
-    const text = opts.text ?? passage(opts.ref, lang);
+    const text = opts.text ?? (opts.partial !== undefined ? partial(opts.ref, opts.partial, lang) : passage(opts.ref, lang));
     const el = h('div', {
       class: `dl-scripture dl-scrim dl-scripture--${opts.position ?? 'center'}${opts.align === 'center' ? ' dl-scripture--center' : ''}${opts.huge ? ' dl-scripture--huge' : ''}`,
       lang,

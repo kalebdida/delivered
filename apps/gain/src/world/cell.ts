@@ -257,7 +257,8 @@ export class Cell {
 
     // The door: heavy planks, iron straps, a small grille.
     this.door = new Group();
-    this.door.position.set(x1 - 0.02, 0, DOOR.z);
+    // Hinged on its near edge, so it swings rather than spins.
+    this.door.position.set(x1 - 0.02, 0, DOOR.z - DOOR.w / 2);
     const wood = new MeshStandardMaterial({ color: '#3b2c1f', roughness: 0.82 });
     const rng = seededRandom('door');
     const planks = 6;
@@ -265,17 +266,17 @@ export class Cell {
       const w = DOOR.w / planks;
       const p = new Mesh(new BoxGeometry(0.1, DOOR.h, w - 0.008), wood.clone());
       (p.material as MeshStandardMaterial).color.offsetHSL(0, 0, rng.range(-0.03, 0.03));
-      p.position.set(0, DOOR.h / 2, -DOOR.w / 2 + w * (i + 0.5));
+      p.position.set(0, DOOR.h / 2, w * (i + 0.5));
       p.castShadow = p.receiveShadow = true;
       this.door.add(p);
     }
     for (const y of [0.35, DOOR.h - 0.35]) {
       const strap = new Mesh(new BoxGeometry(0.03, 0.08, DOOR.w * 0.94), iron);
-      strap.position.set(-0.06, y, 0);
+      strap.position.set(-0.06, y, DOOR.w / 2);
       this.door.add(strap);
     }
     const handle = new Mesh(new TorusGeometry(0.07, 0.012, 8, 20), iron);
-    handle.position.set(-0.09, 1.05, -DOOR.w * 0.32);
+    handle.position.set(-0.09, 1.05, DOOR.w * 0.82);
     handle.rotation.y = Math.PI / 2;
     this.door.add(handle);
     this.group.add(this.door);

@@ -11,7 +11,7 @@ chain is core `Verlet`.
 | 1 | `ledger` | ζημία · 3:7 | The sentence engine (below). Ends with GAIN and Philippians 1:21. |
 | 2 | `chains` | δεσμοί · 1:13 | The chains glow. Drag or shake them: each rattle sends a gold wave through the wall, the corridor, the barracks (instanced guards light up, counter N / 300), then the night city. |
 | 3 | `letter` | τὸ ζῆν Χριστός · 1:21 | Drag the reed pen: gold strokes resolve into the opening of the letter. The scroll rolls, flies out of the window, over Rome and a low-poly sea to a house in Philippi that fills with light. |
-| 4 | `doors` | συνέχομαι · 1:23 | Two doorways. LEFT ἀναλῦσαι is sealed with a veil of light, pushes back gently, says "not yet". RIGHT ἐπιμένειν opens; walking through it ends the chapter. |
+| 4 | `doors` | συνέχομαι · 1:23 | Two doorways in the right wall. On the visitor's left, ἀναλῦσαι: a doorway of light sealed with a veil that pushes back gently and says "not yet". On the right, ἐπιμένειν: the cell's own heavy door; it opens and ends the chapter. |
 | 5 | `labor` | ἐπιμένειν · 1:24 | The Philippian courtyard at morning. Sit with people and they light up; the garden grows. 1:25. |
 | 6 | `light` | κέρδος · 1:21 | The camera rises over the whole journey. Two lines of light, living and departing, rise and meet in one Light. 1:21 word by word; "Either door, the same Light." |
 | end | | | End card, support line, postcard, `markComplete('gain')`. |

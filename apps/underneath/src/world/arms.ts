@@ -93,7 +93,7 @@ export class Arms {
     uWarm: { value: new Color('#fff4da') },
     uGold: { value: new Color('#f5c76b') },
     uGlow: { value: 0 },
-    uGlowSize: { value: 20 },
+    uGlowSize: { value: 12 },
   };
   readonly points: Points;
   private readonly ribbons: Ribbon[] = [];
@@ -229,7 +229,7 @@ export class Arms {
         depthTest: false,
         blending: AdditiveBlending,
         vertexShader: `uniform float uSize; uniform vec3 uC; varying vec2 vUv; void main(){ vUv = uv; vec4 mv = modelViewMatrix * vec4(uC, 1.0); mv.xy += position.xy * uSize; gl_Position = projectionMatrix * mv; }`,
-        fragmentShader: `uniform float uGlow; varying vec2 vUv; void main(){ float d = length(vUv - 0.5) * 2.0; float a = (exp(-d * 6.0) * 1.4 + exp(-d * 2.5) * 0.35) * smoothstep(1.0, 0.7, d) * uGlow; gl_FragColor = vec4(vec3(1.0, 0.86, 0.6) * a * 1.6, a); }`,
+        fragmentShader: `uniform float uGlow; varying vec2 vUv; void main(){ float d = length(vUv - 0.5) * 2.0; float a = (exp(-d * 7.0) * 0.8 + exp(-d * 2.5) * 0.3) * smoothstep(1.0, 0.7, d) * uGlow; gl_FragColor = vec4(vec3(1.0, 0.86, 0.6) * a * 1.6, a); }`,
       }),
     );
     glow.frustumCulled = false;

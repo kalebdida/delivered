@@ -347,11 +347,12 @@ export class SkyColumn {
     this.rain.mesh.visible = w.storm > 0.01;
 
     this.cloudSea.update(dt, camera);
+    this.cloudSea.object.visible = cam.y > 2000;
     const sw = this.stormWalls.uniforms;
     sw.uCam.value.copy(cam);
     sw.uTime.value = this.time;
-    sw.uColor.value.set('#3b4378').lerp(_a.set('#7d86b8'), this.flashGlow);
-    sw.uShade.value.set('#0e1128');
+    sw.uColor.value.set('#56609c').lerp(_a.set('#9aa4d8'), this.flashGlow);
+    sw.uShade.value.set('#1a1f44');
     sw.uOpacity.value = Math.min(1, w.storm * 1.4) * this.wispScale;
     this.stormWalls.mesh.visible = sw.uOpacity.value > 0.01;
     this.lightning.update(dt, w.storm * this.storminess, cam);

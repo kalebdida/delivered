@@ -54,7 +54,7 @@ export class Playground extends UChapter {
   private curve: CatchmullPath | null = null;
   private hud!: HTMLElement;
   private hinted = new Set<string>();
-  private door = new Vector3(-1.5, Y, -7.0);
+  private door = new Vector3(7.2, Y, -0.8);
   private finishing = false;
   private home!: Platform;
   private clouds: Platform[] = [];
@@ -131,14 +131,14 @@ export class Playground extends UChapter {
 
     w.camMode = 'ground';
     w.camDistance = 1.25;
-    w.yaw = 0.5;
+    w.yaw = Math.PI + 0.35;
     w.visitor.fallPose = 0;
     w.visitor.lean = 0;
     w.visitor.glowLevel = 1;
     w.visitor.body.rotation.set(0, 0, 0);
-    w.visitor.motion.teleport(1.5, Y, 2, this.home);
+    w.visitor.motion.teleport(0.5, Y, -1.5, this.home);
     w.visitor.group.position.copy(w.visitor.motion.pos);
-    w.visitor.heading = Math.PI;
+    w.visitor.heading = 0.35;
     w.visitor.settle();
     w.snapCamera();
     w.lets = 0;
@@ -373,9 +373,10 @@ export class Playground extends UChapter {
     const door = add(new Mesh(new TorusGeometry(0.9, 0.06, 8, 40, Math.PI), light));
     door.position.copy(this.door).add(new Vector3(0, 1.4, 0));
     door.scale.set(1, 1.5, 1);
+    door.rotation.y = Math.PI / 2;
     for (const s of [-1, 1]) {
       const jamb = add(new Mesh(new CylinderGeometry(0.06, 0.06, 1.4, 8), light));
-      jamb.position.copy(this.door).add(new Vector3(s * 0.9, 0.7, 0));
+      jamb.position.copy(this.door).add(new Vector3(0, 0.7, s * 0.9));
     }
   }
 

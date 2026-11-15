@@ -33,3 +33,31 @@ cantillation removed, vowel points kept.
 - **If the visitor slips off an island in CH2** before the last one, a gust lifts them back to the
   last island they stood on. They never fall by their own choice or by a missed jump; the only
   fall is the one where the ground gives way.
+
+## Chapters
+- **CH2's card uses יְשֻׁרוּן** (the prompt lists no word for it), CH3 uses בְעֶזְרֶךָ and CH7 uses
+  זְרֹעֹת עוֹלָם, so every chapter opens with a verified word from 33:26-27. CH6 ends by returning to
+  יְשֻׁרוּן as the prompt asks.
+- **CH3 and CH4 share one fall model** (`world/fall.ts`), handed from one chapter to the next with a
+  `cut` transition, so the fall never pauses. CH4 begins when the visitor first looks up in the storm
+  (or at 1,420 units).
+- **The fall cannot be stopped**: speed has a floor and a pacing floor guarantees arrival within
+  100 s whatever the input (garbage input, holding every grab, steering out). Unit tested.
+- **Every CH7 let-go is caught**: `CatchSystem` meets any airborne visitor below the ledge; landing
+  on a cloud ledge after letting go also counts as a catch (the "bounce"), so the two counters always
+  agree. Unit tested with 400 random let-gos.
+- **CH5 runs on real time** while `loop.timeScale` eases to 0.15, so the descent curve and the camera
+  stay smooth while the world slows.
+- **The dwelling rises out of the light** piece by piece instead of the arms' particles morphing into
+  it; a particle morph between two shapes is a later polish item.
+- **The end card's support line** is appended under the core EndCard (it has no slot for it yet);
+  the About panel line waits for the core (CORE_REQUESTS.md #2).
+
+## What this run did not do
+- **Raymarched high-tier clouds** were not added. The core `CloudField` raymarch mode is a backdrop,
+  and the visitor flies through the cloud sea, so it needs the billboard pass kept alongside it; that
+  was left for a later pass to keep this run's scope.
+- **Milestones landed as one commit** (M1 to M5) after the whole room ran end to end, then a review
+  commit, instead of one commit per milestone.
+- **Tested only in headless Chromium with SwiftShader.** No real GPU, no Firefox, Safari or Android
+  yet; frame rates are unmeasured.

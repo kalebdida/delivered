@@ -35,6 +35,7 @@ export class World {
   private readonly lookOff = new Vector3(0, 1.2, 0);
   private readonly camGoal = new Vector3();
   private readonly lookGoal = new Vector3();
+  private readonly focus = new Vector3();
   /** Free-mode targets the chapters set. */
   readonly freePos = new Vector3();
   readonly freeLook = new Vector3();
@@ -135,8 +136,13 @@ export class World {
     const k = this.camMode === 'fall' ? 4 : 5;
     this.camOff.set(damp(this.camOff.x, this.camGoal.x, k, dt), damp(this.camOff.y, this.camGoal.y, k, dt), damp(this.camOff.z, this.camGoal.z, k, dt));
     this.lookOff.set(damp(this.lookOff.x, this.lookGoal.x, k, dt), damp(this.lookOff.y, this.lookGoal.y, k, dt), damp(this.lookOff.z, this.lookGoal.z, k, dt));
-    rig.position.copy(v).add(this.camOff);
-    rig.target.copy(v).add(this.lookOff);
+    // Frame the torso, which the fall pose lifts and pushes forward of the figure's origin.
+    const fp = this.visitor.fallPose;
+    const sh = Math.sin(this.visitor.heading);
+    const ch = Math.cos(this.visitor.heading);
+    this.focus.set(v.x + sh * 0.9 * fp, v.y + 1.1 * fp, v.z + ch * 0.9 * fp);
+    rig.position.copy(this.focus).add(this.camOff);
+    rig.target.copy(this.focus).add(this.lookOff);
   }
 
   /** Jump the camera to its goal (after a cut). */

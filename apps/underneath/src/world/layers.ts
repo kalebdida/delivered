@@ -31,7 +31,7 @@ export interface LayerLook {
 
 export const LOOKS: Record<LayerName, LayerLook> = {
   heights: { zenith: '#5a86b8', horizon: '#f2b866', ground: '#f4ebdd', fog: '#f1d2a4', fogDensity: 0.0016, exposure: 1.05, saturation: 1.08, stars: 0, sunIntensity: 5 },
-  storm: { zenith: '#10132a', horizon: '#2a3060', ground: '#1b1f3a', fog: '#262b4e', fogDensity: 0.006, exposure: 0.95, saturation: 0.72, stars: 0, sunIntensity: 0 },
+  storm: { zenith: '#1a1f40', horizon: '#3a4278', ground: '#1b1f3a', fog: '#30386a', fogDensity: 0.005, exposure: 1.1, saturation: 0.75, stars: 0, sunIntensity: 0 },
   night: { zenith: '#05071a', horizon: '#0f1636', ground: '#0a0d1f', fog: '#0c112b', fogDensity: 0.0006, exposure: 1.1, saturation: 0.95, stars: 1, sunIntensity: 0 },
   fog: { zenith: '#bdbab6', horizon: '#c9c6c2', ground: '#c9c6c2', fog: '#c9c6c2', fogDensity: 0.03, exposure: 0.95, saturation: 0.55, stars: 0, sunIntensity: 0 },
   underneath: { zenith: '#10142e', horizon: '#3e2c4a', ground: '#2a1c2e', fog: '#241c36', fogDensity: 0.0014, exposure: 1.05, saturation: 1.1, stars: 0.7, sunIntensity: 0 },

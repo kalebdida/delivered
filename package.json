@@ -1,0 +1,38 @@
+{
+  "name": "delivered",
+  "private": true,
+  "version": "1.0.0",
+  "description": "DELIVERED: three interactive rooms about deliverance.",
+  "author": "Kaleb Dida (@kalebdida)",
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@10.28.0",
+  "scripts": {
+    "dev:hub": "pnpm --filter @delivered/hub dev",
+    "dev:wretched": "pnpm --filter @delivered/wretched dev",
+    "dev:underneath": "pnpm --filter @delivered/underneath dev",
+    "dev:gain": "pnpm --filter @delivered/gain dev",
+    "dev:demo": "pnpm --filter @delivered/core-demo dev",
+    "build": "node scripts/build.mjs",
+    "preview": "node scripts/preview.mjs",
+    "typecheck": "tsc -p tsconfig.json --pretty",
+    "test": "vitest run",
+    "lint": "eslint . && tsc -p tsconfig.json",
+    "format": "prettier --write \"**/*.{ts,css,html,json}\" --log-level warn",
+    "shots": "node scripts/shots.mjs",
+    "verify:scripture": "node scripts/verify-scripture.mjs",
+    "fetch:amharic": "node scripts/fetch-amharic.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/three": "^0.187.0",
+    "eslint": "^10.15.0",
+    "jsdom": "^31.0.1",
+    "playwright": "^1.65.1",
+    "prettier": "^3.10.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.72.2",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.0"
+  }
+}

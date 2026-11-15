@@ -1,0 +1,6 @@
+dist
+node_modules
+shots
+pnpm-lock.yaml
+*.md
+packages/core/src/scripture/scripture.*.ts

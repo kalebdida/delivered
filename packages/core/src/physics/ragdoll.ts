@@ -124,6 +124,7 @@ export function createRagdoll(physics: Physics, opts: RagdollOptions = {}): Ragd
   hinge('upperLegL', 'lowerLegL', -0.1, -0.54, -0.05, lim.knee);
   hinge('upperLegR', 'lowerLegR', 0.1, -0.54, -0.05, lim.knee);
 
+  let disposed = false;
   return {
     bodies,
     joints,
@@ -143,7 +144,9 @@ export function createRagdoll(physics: Physics, opts: RagdollOptions = {}): Ragd
       }
     },
     dispose() {
-      for (const j of joints) world.removeImpulseJoint(j, true);
+      if (disposed) return;
+      disposed = true;
+      joints.length = 0;
       for (const b of Object.values(bodies)) physics.remove(b);
       root.traverse((o) => (o as Mesh).geometry?.dispose());
       if (ownsMaterial) material.dispose();

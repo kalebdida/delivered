@@ -200,7 +200,7 @@ void main(){
 const BILLBOARD_VERT = /* glsl */ `
 attribute vec3 aOffset; attribute vec4 aSeed;
 uniform vec3 uWind, uCenter; uniform float uTime, uExtent, uBase, uTop;
-varying vec2 vUv; varying vec4 vSeed; varying float vDepth; varying float vHeight;
+varying vec2 vUv; varying vec4 vSeed; varying float vDepth; varying float vHeight; varying float vEdge;
 void main(){
   vec3 c = aOffset + uWind * uTime;
   // Wrap around the field centre so the layer is endless.
@@ -214,6 +214,7 @@ void main(){
   vUv = position.xy;
   vSeed = aSeed;
   vDepth = -mv.z;
+  vEdge = length(c.xz - uCenter.xz) / uExtent;
   vHeight = clamp((c.y - uBase) / max(uTop - uBase, 0.001), 0.0, 1.0);
   gl_Position = projectionMatrix * mv;
 }`;
@@ -221,7 +222,7 @@ void main(){
 const BILLBOARD_FRAG = /* glsl */ `
 uniform vec3 uLightColor, uShadowColor, uHazeColor, uLightView;
 uniform float uTime, uDensity, uExtent, uSilver, uCoverage;
-varying vec2 vUv; varying vec4 vSeed; varying float vDepth; varying float vHeight;
+varying vec2 vUv; varying vec4 vSeed; varying float vDepth; varying float vHeight; varying float vEdge;
 ${glsl.hash}
 ${glsl.dither}
 float vn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f);
@@ -243,8 +244,9 @@ void main(){
   float back = max(-normalize(uLightView).z, 0.0);
   col += uLightColor * pow(1.0 - body, 2.0) * body * 2.2 * back * uSilver;
   col = mix(col, uHazeColor, (1.0 - exp(-vDepth / (uExtent * 0.6))) * 0.7);
-  // Depth fade: sprites dissolve instead of clipping when the camera flies through them.
-  a *= smoothstep(0.5, 6.0 + vSeed.x * 0.15, vDepth) * (1.0 - smoothstep(uExtent * 0.8, uExtent, vDepth));
+  // Depth fade: sprites dissolve instead of clipping when the camera flies through them,
+  // and fade out toward the edge of the field so wrapping is never visible.
+  a *= smoothstep(0.5, 6.0 + vSeed.x * 0.15, vDepth) * (1.0 - smoothstep(0.72, 0.98, vEdge));
   if (a < 0.003) discard;
   gl_FragColor = vec4(col * a + dither(gl_FragCoord.xy) * a, a);
 }`;

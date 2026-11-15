@@ -201,7 +201,9 @@ export class Director<Ctx extends CoreContext = CoreContext> {
       if (this.current) {
         const before = this.baseline;
         this.current._exit();
-        if (this.opts.leakCheck && before) checkLeaks(renderer, before, this.current.id);
+        // The first chapter also triggers engine-owned allocations (shadow maps, bloom buffers,
+        // the LUT), so its first exit is not a fair measurement.
+        if (this.opts.leakCheck && before && this.exits++ > 0) checkLeaks(renderer, before, this.current.id);
       }
       this.baseline = memorySnapshot(renderer);
       this.current = target;
@@ -219,6 +221,7 @@ export class Director<Ctx extends CoreContext = CoreContext> {
     }
   }
   private baseline: ReturnType<typeof memorySnapshot> | null = null;
+  private exits = 0;
 
   /** Call once per frame. `realDt` (unscaled) keeps transitions moving during slow motion. */
   update(dt: number, realDt = dt): void {
@@ -228,7 +231,10 @@ export class Director<Ctx extends CoreContext = CoreContext> {
     this.current.time += dt;
     this.current.update(dt);
     const g = globalThis as { __delivered?: Record<string, unknown> };
-    if (g.__delivered) g.__delivered.elapsed = this.since;
+    if (g.__delivered) {
+      g.__delivered.elapsed = this.since;
+      g.__delivered.busy = this.busy;
+    }
   }
 
   /** Call once per fixed step. */

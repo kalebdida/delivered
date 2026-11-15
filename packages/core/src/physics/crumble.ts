@@ -243,8 +243,10 @@ export function createCrumble(physics: Physics, opts: CrumbleOptions): Crumble {
       for (const c of chunks) {
         if (c.body) physics.remove(c.body);
         if (c.anchor) physics.remove(c.anchor);
+        c.body = c.anchor = null;
         c.mesh.geometry.dispose();
       }
+      pending.length = 0;
       group.removeFromParent();
     },
   };

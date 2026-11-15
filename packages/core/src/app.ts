@@ -69,6 +69,8 @@ export interface AppOptions<Ctx extends CoreContext = CoreContext> {
   /** Hub URL for the back button (default '/'; null hides it). */
   home?: string | null;
   quality?: QualityTier;
+  /** Show the touch joystick and buttons on touch devices (default true; the hub turns it off). */
+  virtualControls?: boolean;
   /** Extra per-frame work, after the chapter update and before rendering. */
   onFrame?: (dt: number, ctx: Ctx) => void;
   /** Runs while the loader shows: build persistent world objects, register strings, etc. */
@@ -115,7 +117,7 @@ export async function createApp<Ctx extends CoreContext = CoreContext>(opts: App
   postfx.addEffect(transition);
   transition.progress = 1;
   const rig = new CameraRig(engine.camera);
-  const input = new Input({ element: canvas });
+  const input = new Input({ element: canvas, virtualControls: opts.virtualControls });
   const audio = new AudioEngine();
   if (opts.reverb) audio.setReverb(opts.reverb);
   const offSounds = bindUISounds(audio);
@@ -135,6 +137,7 @@ export async function createApp<Ctx extends CoreContext = CoreContext>(opts: App
   const [, physics] = await Promise.all([quality.detect(), opts.physics ? Physics.create() : Promise.resolve(null)]);
   loader.setProgress(0.45);
 
+  (globalThis as { __delivered?: Record<string, unknown> }).__delivered = { engine, ready: false };
   const ctx = {
     appId: opts.appId, engine, loop, quality, postfx, rig, input, audio, physics, store: createStore(opts.appId), ui, debug: null, t,
   } as unknown as Ctx;

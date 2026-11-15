@@ -319,9 +319,11 @@ export class RopeMesh {
     this.rope.updateTexture();
   }
 
+  /** Frees the tube and the rope's point texture. */
   dispose(): void {
     this.mesh.geometry.dispose();
     this.mat.dispose();
+    this.rope.dispose();
     this.mesh.removeFromParent();
   }
 }

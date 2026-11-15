@@ -116,7 +116,7 @@ export function createChain(physics: Physics, opts: ChainOptions): Chain {
     breakAt,
     dispose() {
       off();
-      for (const j of joints) if (j) world.removeImpulseJoint(j, true);
+      // Removing a body removes its joints too, so only the bodies need to go.
       for (const b of links) physics.remove(b);
       links.length = 0;
       joints.length = 0;
@@ -161,8 +161,9 @@ export function createPhysicsRope(physics: Physics, opts: RopeOptions): { nodes:
   return {
     nodes,
     dispose() {
-      joints.forEach((j) => world.removeImpulseJoint(j, true));
       nodes.forEach((b) => physics.remove(b));
+      nodes.length = 0;
+      joints.length = 0;
     },
   };
 }

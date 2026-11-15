@@ -1,0 +1,212 @@
+.hub {
+  position: fixed;
+  inset: 0;
+  z-index: 12;
+  pointer-events: none;
+  transition: opacity 900ms var(--ease-in-out-quart);
+}
+.hub.is-leaving {
+  opacity: 0;
+}
+.hub > * {
+  pointer-events: auto;
+}
+.hub__head {
+  position: absolute;
+  top: calc(var(--safe-top) + clamp(3.2rem, 7.5vh, 5.5rem));
+  left: 0;
+  right: 0;
+  display: grid;
+  justify-items: center;
+  gap: 0.55rem;
+  text-align: center;
+  pointer-events: none;
+  padding: 0 var(--pad);
+}
+.hub__mark {
+  margin-bottom: 0.3rem;
+}
+.hub__wordmark {
+  margin: 0 -0.42em 0 0;
+  font-family: 'Cormorant Garamond', 'Cormorant Fallback', Georgia, serif;
+  font-weight: 300;
+  font-size: clamp(2rem, 0.9rem + 4.6vw, 4.6rem);
+  letter-spacing: 0.42em;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--bone);
+}
+.hub__wordmark span {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(14px);
+  filter: blur(8px);
+  transition:
+    opacity 1300ms var(--ease-out-expo),
+    transform 1300ms var(--ease-out-expo),
+    filter 1300ms var(--ease-out-expo);
+  transition-delay: calc(200ms + var(--i) * 85ms);
+}
+.hub.is-in .hub__wordmark span {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+.hub__intro {
+  margin-top: 0.7rem;
+  font-size: clamp(1.25rem, 1rem + 1vw, 1.75rem);
+  color: var(--text-dim);
+  max-width: none;
+}
+.hub__done {
+  margin: 1.1rem 0 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-title);
+  font-weight: 300;
+  color: var(--gold-light);
+}
+.hub__done-verse {
+  margin: 0;
+  font-family: var(--font-display);
+  font-style: italic;
+  color: var(--text-dim);
+  max-width: 34ch;
+}
+.hub__portals {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.hub__label {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: grid;
+  justify-items: center;
+  gap: 0.2rem;
+  width: max-content;
+  max-width: 30vw;
+  padding: 0.5rem 0.6rem;
+  text-align: center;
+  text-decoration: none;
+  will-change: transform;
+}
+.hub__label > * {
+  transition:
+    opacity 700ms var(--ease-out-expo),
+    translate 700ms var(--ease-out-expo),
+    filter 700ms var(--ease-out-expo),
+    color 700ms var(--ease-out-expo);
+}
+.hub__label-title {
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: var(--fs-label);
+  letter-spacing: 0.3em;
+  margin-right: -0.3em;
+  color: var(--text-faint);
+}
+.hub__label-theme,
+.hub__label .dl-ref {
+  opacity: 0;
+  translate: 0 8px;
+  filter: blur(4px);
+}
+.hub__label-theme {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: clamp(1rem, 0.9rem + 0.5vw, 1.3rem);
+  color: var(--bone);
+  transition-delay: 40ms;
+}
+:lang(am) .hub__label-theme {
+  font-style: normal;
+  font-size: 0.95rem;
+}
+.hub__label .dl-ref {
+  font-size: var(--fs-caption);
+  transition-delay: 90ms;
+}
+.hub__label.is-active .hub__label-title,
+.hub__label:focus-visible .hub__label-title {
+  color: var(--gold-light);
+}
+.hub__label.is-active > *,
+.hub__label:focus-visible > * {
+  opacity: 1;
+  translate: 0 0;
+  filter: none;
+}
+.hub__footer {
+  position: absolute;
+  left: calc(var(--safe-left) + var(--pad));
+  right: calc(var(--safe-right) + var(--pad));
+  bottom: calc(var(--safe-bottom) + 0.7rem);
+  display: grid;
+  gap: 0.15rem;
+}
+.hub__footer-row {
+  display: flex;
+  align-items: center;
+  gap: 1.4rem;
+}
+.hub__made {
+  margin-left: auto;
+  font-size: var(--fs-label);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  font-weight: 500;
+  color: var(--text-dim);
+}
+:lang(am) .hub__made {
+  text-transform: none;
+}
+.hub__fine {
+  margin: 0;
+  font-size: 0.6875rem;
+  line-height: 1.5;
+  color: var(--text-faint);
+  max-width: 110ch;
+}
+.hub__fine a {
+  color: var(--text-dim);
+  text-underline-offset: 3px;
+}
+.dl-dialog .dl-body {
+  margin: 0 0 0.9rem;
+}
+.dl-dialog a {
+  color: var(--accent-light);
+  text-underline-offset: 3px;
+}
+@media (max-width: 720px) {
+  .hub__head {
+    top: calc(var(--safe-top) + 4.4rem);
+  }
+  .hub__label {
+    max-width: 31vw;
+    padding: 0.4rem 0.1rem;
+  }
+  .hub__label-title {
+    font-size: 0.625rem;
+    letter-spacing: 0.16em;
+    margin-right: -0.16em;
+  }
+  .hub__label-theme {
+    font-size: 0.9375rem;
+    line-height: 1.15;
+  }
+  /* The long credit lines live in the Credits panel on small screens. */
+  .hub__fine {
+    display: none;
+  }
+  .hub__footer-row {
+    gap: 1rem;
+  }
+}
+/* OG image capture: scene, wordmark and intro only. */
+.is-og .hub__footer,
+.is-og .dl-chrome,
+.is-og .hub__portals {
+  display: none;
+}

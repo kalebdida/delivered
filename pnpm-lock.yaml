@@ -45,6 +45,15 @@ importers:
         specifier: workspace:*
         version: link:../../packages/core
 
+  apps/hub:
+    dependencies:
+      '@delivered/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      three:
+        specifier: ^0.187.0
+        version: 0.187.0
+
   apps/underneath:
     dependencies:
       '@delivered/core':

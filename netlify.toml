@@ -1,0 +1,44 @@
+# DELIVERED on Netlify: one static site assembled by `pnpm build`.
+[build]
+  command = "pnpm build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Hashed assets never change: cache them for a year.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+[[headers]]
+  for = "/*/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# HTML is always revalidated so a deploy shows up at once.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), geolocation=(), microphone=(self), accelerometer=(self), gyroscope=(self)"
+
+# Each room is its own single-page app: unknown paths inside a room fall back to that room.
+[[redirects]]
+  from = "/wretched/*"
+  to = "/wretched/index.html"
+  status = 200
+[[redirects]]
+  from = "/underneath/*"
+  to = "/underneath/index.html"
+  status = 200
+[[redirects]]
+  from = "/gain/*"
+  to = "/gain/index.html"
+  status = 200
+[[redirects]]
+  from = "/demo/*"
+  to = "/demo/index.html"
+  status = 200
+# Anything else that does not exist gets the designed 404 (dist/404.html is served automatically).

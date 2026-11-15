@@ -254,7 +254,11 @@ export class WeightChapter extends Chapter {
       this.root.add(this.ragdoll.group);
     };
     spawn();
-    this.own(() => this.ragdoll?.dispose());
+    this.own(() => {
+      this.ragdoll?.dispose();
+      this.ragdoll = null;
+      this.linkMeshes.length = 0;
+    });
     demoState.dropRagdoll = () => {
       spawn();
       ctx.audio.impact(0.3);
@@ -291,7 +295,7 @@ export class SkyChapter extends Chapter {
   private figure!: Mesh;
 
   enter(ctx: CoreContext): void {
-    const { engine, rig, postfx } = ctx;
+    const { rig, postfx } = ctx;
     postfx.setPreset('dream');
     postfx.params.bloom = 0.5;
     rig.snapTo(new Vector3(-1.5, 2.6, 14), new Vector3(0.6, 0.4, 0));

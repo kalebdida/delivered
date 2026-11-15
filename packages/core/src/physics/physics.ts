@@ -40,6 +40,8 @@ export class Physics {
   private bindings = new Map<number, { object: Object3D; body: RigidBody }>();
   private stepListeners = new Set<(dt: number) => void>();
   private debugLines: LineSegments | null = null;
+  /** Bodies already removed. Rapier recycles handles, so a stale body must never be removed twice. */
+  private removed = new WeakSet<RigidBody>();
 
   private constructor(
     /** The Rapier namespace, for anything the helpers do not cover. */
@@ -126,8 +128,10 @@ export class Physics {
     return c;
   }
 
-  /** Remove a body, its colliders and joints, and its mesh binding. */
+  /** Remove a body, its colliders and joints, and its mesh binding. Safe to call twice. */
   remove(body: RigidBody): void {
+    if (this.removed.has(body)) return;
+    this.removed.add(body);
     this.bindings.delete(body.handle);
     if (this.world.bodies.contains(body.handle)) this.world.removeRigidBody(body);
   }

@@ -1,5 +1,4 @@
 import {
-  Clock,
   Color,
   DirectionalLight,
   NoToneMapping,
@@ -7,8 +6,10 @@ import {
   PerspectiveCamera,
   Scene,
   SRGBColorSpace,
+  Timer,
   WebGLRenderer,
   type Camera,
+  type Mesh,
   type Object3D,
 } from 'three';
 import { palette } from './tokens';
@@ -28,7 +29,8 @@ export interface Engine {
   renderer: WebGLRenderer;
   scene: Scene;
   camera: PerspectiveCamera;
-  clock: Clock;
+  /** A three.js Timer for ad-hoc timing. The main loop is `Loop`; call `clock.update()` before reading. */
+  clock: Timer;
   quality: Quality;
   /** Scene exposure, applied by PostFX tone mapping (ACES filmic). */
   exposure: number;
@@ -82,7 +84,7 @@ export function createEngine(opts: EngineOptions): Engine {
   scene.background = new Color(palette.ink);
   const camera = new PerspectiveCamera(opts.fov ?? 45, 1, 0.1, 2000);
   camera.position.set(0, 1.6, 6);
-  const clock = new Clock();
+  const clock = new Timer();
   const listeners = new Set<(w: number, h: number, dpr: number) => void>();
   const size = { width: 1, height: 1 };
 
@@ -144,6 +146,8 @@ export function createEngine(opts: EngineOptions): Engine {
     },
     castShadows(root, cast = true, receive = true) {
       root.traverse((o) => {
+        // Meshes only: lights have their own shadow setup (see setupShadowLight).
+        if (!(o as Mesh).isMesh) return;
         o.castShadow = cast;
         o.receiveShadow = receive;
       });

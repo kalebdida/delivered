@@ -1,0 +1,259 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--ink);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'onum' 1, 'kern' 1;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+body.dl-stage {
+  overflow: hidden;
+  scrollbar-width: none;
+  touch-action: none;
+}
+body.dl-stage::-webkit-scrollbar {
+  display: none;
+}
+::selection {
+  background: color-mix(in srgb, var(--gold) 30%, transparent);
+  color: var(--bone);
+}
+a {
+  color: inherit;
+}
+button {
+  font: inherit;
+  color: inherit;
+}
+:focus {
+  outline: none;
+}
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: 6px;
+}
+
+.dl-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+}
+/* Everything DOM sits in this layer above the canvas. */
+.dl-ui {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+  padding: calc(var(--pad) + var(--safe-top)) calc(var(--pad) + var(--safe-right)) calc(var(--pad) + var(--safe-bottom))
+    calc(var(--pad) + var(--safe-left));
+}
+.dl-ui > * {
+  pointer-events: auto;
+}
+.dl-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Type roles */
+.dl-display {
+  font-family: var(--font-display);
+  font-weight: 300;
+  font-size: var(--fs-display);
+  line-height: var(--lh-display);
+  letter-spacing: var(--track-display);
+  margin: 0;
+}
+.dl-title {
+  font-family: var(--font-display);
+  font-weight: 300;
+  font-size: var(--fs-title);
+  line-height: 1.1;
+  letter-spacing: var(--track-display);
+  margin: 0;
+}
+.dl-verse {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: var(--fs-verse);
+  line-height: var(--lh-verse);
+  max-width: 30ch;
+  text-wrap: balance;
+  margin: 0;
+}
+:lang(am) .dl-verse,
+.dl-verse:lang(am) {
+  font-style: normal;
+  font-weight: 300;
+  max-width: 24ch;
+}
+.dl-body {
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--text-dim);
+  max-width: 60ch;
+}
+.dl-caption {
+  font-size: var(--fs-caption);
+  color: var(--text-dim);
+}
+.dl-label {
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: var(--fs-label);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+/* Verse references: small caps, oldstyle numerals. */
+.dl-ref {
+  font-family: var(--font-display);
+  font-style: normal;
+  font-variant-caps: all-small-caps;
+  font-variant-numeric: oldstyle-nums;
+  letter-spacing: 0.12em;
+  font-size: calc(var(--fs-body) * 1.05);
+  color: var(--accent);
+}
+:lang(am) .dl-ref {
+  font-variant-caps: normal;
+  letter-spacing: 0.02em;
+  font-size: var(--fs-caption);
+}
+.dl-tabular {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.dl-greek {
+  font-family: var(--font-greek);
+  font-style: normal;
+}
+.dl-hebrew {
+  font-family: var(--font-hebrew);
+  font-style: normal;
+  direction: rtl;
+  unicode-bidi: isolate;
+}
+.dl-icon {
+  display: block;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+.dl-mark {
+  color: var(--gold);
+  display: inline-block;
+}
+
+/* Soft local scrim so text over 3D stays readable at AA contrast. */
+.dl-scrim {
+  position: relative;
+  isolation: isolate;
+}
+.dl-scrim::before {
+  content: '';
+  position: absolute;
+  inset: -2.5em -3.5em;
+  z-index: -1;
+  background: radial-gradient(closest-side, var(--scrim), color-mix(in srgb, var(--ink) 30%, transparent) 60%, transparent);
+  filter: blur(18px);
+  pointer-events: none;
+}
+
+/* Line-mask text reveal: each line rises 12px from behind a mask, blur to sharp, 60ms stagger. */
+.dl-line {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.14em;
+  margin-bottom: -0.14em;
+}
+.dl-line > span {
+  display: inline-block;
+  transform: translateY(calc(100% + 12px));
+  filter: blur(6px);
+  opacity: 0;
+  transition:
+    transform var(--t-reveal) var(--ease-out-expo),
+    filter var(--t-reveal) var(--ease-out-expo),
+    opacity calc(var(--t-reveal) * 0.6) var(--ease-out-expo);
+  transition-delay: calc(var(--i, 0) * var(--stagger));
+  will-change: transform, filter;
+}
+.is-in > .dl-line > span,
+.is-in .dl-line > span {
+  transform: none;
+  filter: none;
+  opacity: 1;
+}
+.is-out .dl-line > span {
+  transform: translateY(-10px);
+  filter: blur(5px);
+  opacity: 0;
+  transition-duration: var(--t-ui);
+  transition-delay: 0ms;
+}
+/* Generic rise-in for blocks that are not split into lines. */
+.dl-rise {
+  opacity: 0;
+  transform: translateY(12px);
+  filter: blur(4px);
+  transition:
+    transform var(--t-reveal) var(--ease-out-expo),
+    filter var(--t-reveal) var(--ease-out-expo),
+    opacity var(--t-reveal) var(--ease-out-expo);
+  transition-delay: calc(var(--i, 0) * var(--stagger));
+}
+.is-in > .dl-rise,
+.is-in .dl-rise,
+.dl-rise.is-in {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+
+/* Reduced motion: movement becomes a gentle crossfade. */
+[data-reduced-motion] .dl-line > span,
+[data-reduced-motion] .dl-rise {
+  transform: none !important;
+  filter: none !important;
+  transition: opacity 600ms ease !important;
+}
+[data-reduced-motion] *,
+[data-reduced-motion] *::before,
+[data-reduced-motion] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+}
+@keyframes dl-breath {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  45% {
+    opacity: 1;
+  }
+}

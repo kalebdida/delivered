@@ -1,0 +1,98 @@
+/* DESIGN.md tokens. Rooms remap the palette tokens (never the names) on :root or [data-room]. */
+:root {
+  /* Shared palette. Darkest black is ink, brightest white is bone. Never #000 or #fff. */
+  --ink: #07070a;
+  --bone: #f7f3ea;
+  --gold: #f5c76b;
+  --gold-light: #ffe9b0;
+  --mist: #8e8a93;
+
+  /* Semantic tokens that rooms remap to their own palette. */
+  --surface: #101016;
+  --text: var(--bone);
+  --text-dim: color-mix(in srgb, var(--bone) 62%, transparent);
+  --text-faint: color-mix(in srgb, var(--bone) 38%, transparent);
+  --accent: var(--gold);
+  --accent-light: var(--gold-light);
+  --hairline: color-mix(in srgb, var(--bone) 14%, transparent);
+  --panel: color-mix(in srgb, var(--ink) 72%, transparent);
+  --scrim: color-mix(in srgb, var(--ink) 58%, transparent);
+
+  /* Type families */
+  --font-display: 'Cormorant Garamond', 'Cormorant Fallback', 'Noto Serif Ethiopic', Georgia, serif;
+  --font-ui: 'Inter Variable', 'Inter Fallback', 'Noto Sans Ethiopic', system-ui, sans-serif;
+  --font-greek: 'Noto Serif', 'Cormorant Garamond', serif;
+  --font-hebrew: 'Noto Serif Hebrew', 'Cormorant Garamond', serif;
+
+  /* Fluid type scale */
+  --fs-display: clamp(3.5rem, 2.2rem + 7.2vw, 7rem); /* 56 to 112 */
+  --fs-title: clamp(2rem, 1.6rem + 1.8vw, 3rem); /* 32 to 48 */
+  --fs-verse: clamp(1.375rem, 1.1rem + 1.3vw, 2.125rem); /* 22 to 34 */
+  --fs-body: clamp(1rem, 0.96rem + 0.2vw, 1.125rem); /* 16 to 18 */
+  --fs-caption: clamp(0.75rem, 0.73rem + 0.1vw, 0.8125rem); /* 12 to 13 */
+  --fs-label: clamp(0.6875rem, 0.67rem + 0.1vw, 0.75rem); /* 11 to 12 */
+  --lh-display: 1;
+  --lh-verse: 1.28;
+  --lh-body: 1.55;
+  --track-display: -0.01em;
+  --track-label: 0.24em;
+
+  /* Motion: nothing moves linearly. */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-quart: cubic-bezier(0.76, 0, 0.24, 1);
+  --ease-breath: cubic-bezier(0.37, 0, 0.63, 1);
+  --t-micro: 160ms;
+  --t-ui: 420ms;
+  --t-reveal: 1100ms;
+  --stagger: 60ms;
+
+  /* Space and shape */
+  --pad: clamp(1rem, 0.6rem + 2vw, 2rem);
+  --radius: 14px;
+  --blur: 24px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --focus-ring: 0 0 0 1px var(--ink), 0 0 0 2.5px var(--accent), 0 0 18px 2px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+/* Room palettes, mapped to the same token names so UI stays consistent. */
+[data-room='wretched'] {
+  --ink: #0c0b0e;
+  --surface: #2b2a2e;
+  --mist: #9a968f;
+  --accent: #ffd9a0;
+  --accent-light: #f5c76b;
+}
+[data-room='underneath'] {
+  --ink: #0a0d1f;
+  --surface: #1b1f3a;
+  --mist: #7fa6c9;
+  --accent: #f2b866;
+  --accent-light: #fff4da;
+}
+[data-room='gain'] {
+  --ink: #0e0c0b;
+  --surface: #3a3530;
+  --mist: #6e6a66;
+  --accent: #ffb25c;
+  --accent-light: #cfe0ff;
+}
+
+/* Amharic: Ethiopic glyphs need a slightly larger size and more line height to look balanced. */
+:root:lang(am) {
+  --font-display: 'Noto Serif Ethiopic', 'Cormorant Garamond', serif;
+  --font-ui: 'Noto Sans Ethiopic', 'Inter Variable', system-ui, sans-serif;
+  --fs-display: clamp(2.75rem, 1.8rem + 5.4vw, 5.5rem);
+  --fs-title: clamp(1.75rem, 1.45rem + 1.4vw, 2.5rem);
+  --fs-verse: clamp(1.3125rem, 1.1rem + 1vw, 1.875rem);
+  --fs-body: clamp(1.0625rem, 1.02rem + 0.2vw, 1.1875rem);
+  --fs-caption: clamp(0.8125rem, 0.79rem + 0.1vw, 0.875rem);
+  --fs-label: clamp(0.75rem, 0.73rem + 0.1vw, 0.8125rem);
+  --lh-display: 1.25;
+  --lh-verse: 1.6;
+  --lh-body: 1.75;
+  --track-display: 0;
+  --track-label: 0.06em;
+}

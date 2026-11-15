@@ -57,14 +57,14 @@ export class Doors extends GChapter {
   private nextVoice = 2;
 
   enter(ctx: GainCtx): void {
-    this.begin(ctx);
+    this.begin(ctx, { walk: true });
     const w = ctx.world;
     w.inCell = true;
     this.opened = false;
     this.opening = this.push = 0;
     // The visitor stands in the middle of the cell. The chains stay on the wrists; their wall
     // ends have come loose, so they drag behind.
-    w.figure.group.position.set(-0.3, 0, -0.35);
+    w.figure.group.position.set(0.05, 0, -0.35);
     w.figure.heading = Math.PI / 2;
     w.figure.sit = 0;
     w.figure.kneel = 0;
@@ -76,7 +76,9 @@ export class Doors extends GChapter {
     w.lamp.target = 0.5;
     w.beam.intensity = 0.8;
     w.cell.door.rotation.y = 0;
-    ctx.rig.follow(w.figure.group, { offset: new Vector3(-2.7, 1.75, 0.1), lookOffset: new Vector3(1.6, 1.15, -0.25), spring: 'gentle' }, true);
+    ctx.rig.follow(w.figure.group, { offset: new Vector3(-2.25, 1.7, 0.1), lookOffset: new Vector3(1.6, 1.15, -0.25), spring: 'gentle' }, true);
+    // A narrow screen needs a taller view to hold both doors and the visitor.
+    ctx.rig.setFov(ctx.engine.camera.aspect < 0.9 ? 78 : 50);
 
     // The depart doorway: a veil of light in an arch, with its words above it.
     const g = new Group();
@@ -145,7 +147,7 @@ export class Doors extends GChapter {
 
     this.card({ word: 'συνέχομαι', lang: 'grc', translit: 'synechomai', english: 'I am hard pressed', ref: 'Philippians 1:23', number: 4 });
     this.at(4.6, () => void ctx.ui.scripture.show({ ref: 'Philippians 1:23-24', position: 'upper', duration: 9 }));
-    this.at(6, () => ctx.ui.hud.set('bottom-center', ctx.t('gain.doors.hint')));
+    this.at(6, () => ctx.ui.hud.set('bottom-center', ctx.t(ctx.input.device === 'touch' ? 'gain.doors.hintTouch' : 'gain.doors.hint')));
   }
 
   update(dt: number): void {

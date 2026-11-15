@@ -163,3 +163,10 @@
 @media (prefers-reduced-motion: reduce) {
   .gn-word { transform: none; filter: none; }
 }
+
+/* The joystick only where the visitor walks (CH4, CH5); the action buttons stay. */
+.gn-vc-still .dl-vc__zone,
+.gn-vc-still .dl-vc__ring,
+.gn-vc-still .dl-vc__knob {
+  display: none !important;
+}

@@ -84,7 +84,7 @@ export class Letter extends GChapter {
       new PlaneGeometry(0.34, 0.24).rotateX(-Math.PI / 2),
       new MeshBasicMaterial({ map: this.tex, transparent: true, depthWrite: false, toneMapped: false }),
     );
-    (this.sheet.material as MeshBasicMaterial).color.setRGB(1.6, 1.3, 0.85);
+    (this.sheet.material as MeshBasicMaterial).color.setRGB(1.25, 1.12, 0.95);
     this.sheet.position.copy(p.position).add(new Vector3(0, 0.012, 0));
     this.sheet.rotation.y = p.rotation.y;
     this.sheet.renderOrder = 20;
@@ -110,16 +110,23 @@ export class Letter extends GChapter {
     g.clearRect(0, 0, W, H);
     g.lineCap = 'round';
     g.lineJoin = 'round';
-    g.strokeStyle = `rgba(245, 199, 107, ${0.85 * (1 - p * 0.92)})`;
-    g.lineWidth = 5;
+    // The visitor's own strokes: gold over a dark bronze edge, fading as the real words come.
+    const fade = 1 - p * 0.92;
     g.beginPath();
     for (const s of this.strokes) {
       g.moveTo(s.a[0] * W, s.a[1] * H);
       g.lineTo(s.b[0] * W, s.b[1] * H);
     }
+    g.strokeStyle = `rgba(70, 40, 12, ${0.7 * fade})`;
+    g.lineWidth = 11;
     g.stroke();
+    g.strokeStyle = `rgba(245, 199, 107, ${0.95 * fade})`;
+    g.lineWidth = 6;
+    g.stroke();
+    g.font = 'italic 500 46px "Cormorant Garamond", Georgia, serif';
+    g.lineWidth = 5;
+    g.strokeStyle = 'rgba(64, 36, 10, 0.85)';
     g.fillStyle = '#f5c76b';
-    g.font = 'italic 400 44px "Cormorant Garamond", Georgia, serif';
     g.textBaseline = 'alphabetic';
     let left = Math.floor(this.total * easing.outQuad(p));
     let y = 96;
@@ -137,6 +144,7 @@ export class Letter extends GChapter {
       rows.push(row);
       for (const r of rows) {
         if (left <= 0) break;
+        g.strokeText(r.slice(0, left), 70, y);
         g.fillText(r.slice(0, left), 70, y);
         left -= r.length;
         y += 58;
@@ -289,6 +297,7 @@ export class Letter extends GChapter {
   private toRome(): void {
     const { ctx } = this;
     ctx.world.inCell = false;
+    ctx.world.air('night');
     ctx.world.release();
     this.rome = new Rome({ maxInstances: Math.min(400, ctx.quality.budget.maxInstances), guards: false });
     this.root.add(this.rome.group);
@@ -308,6 +317,7 @@ export class Letter extends GChapter {
     this.rome = null;
     this.map = new MapWorld();
     this.root.add(this.map.group);
+    ctx.world.air('map');
     const start = ROUTE.getPointAt(0);
     this.streak!.reset(start);
     ctx.rig.snapTo(start.clone().add(new Vector3(-4.5, 3.4, 1.2)), start.clone().add(new Vector3(2, 0, 0.5)));
@@ -322,6 +332,7 @@ export class Letter extends GChapter {
     this.map = null;
     this.house = new House();
     this.root.add(this.house.group);
+    ctx.world.air('night');
     const win = this.house.window;
     this.streak!.reset(win.clone().add(new Vector3(3, 6, 8)));
     ctx.rig.snapTo(new Vector3(2.6, 1.7, 7.6), new Vector3(0.1, 1.4, 1.6));

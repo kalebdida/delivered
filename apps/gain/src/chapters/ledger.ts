@@ -26,7 +26,7 @@ const ARC: Record<LedgerId, [number, number, number]> = {
   laurel: [-1.95, 1.72, -1.62],
   coins: [-1.72, 0.88, -0.95],
   scroll: [-1.4, 1.82, -1.4],
-  heart: [-1.18, 1.32, -1.0],
+  heart: [-0.98, 1.2, -0.8],
   cushion: [-0.95, 0.86, -1.08],
   mirror: [-0.86, 1.6, -1.35],
 };
@@ -404,6 +404,18 @@ export class LedgerChapter extends GChapter {
     const pullGoal = this.ledger.motesDue && this.phase !== 'reveal' ? 1 : 0;
     w.beam.pull = damp(w.beam.pull, pullGoal, 0.35, dt);
     w.beam.pullTarget.copy(w.figure.headPosition()).add(new Vector3(0.25, -0.2, 0.35));
+    // On a narrow (portrait) screen the sentence stacks and sits in the upper third of the view.
+    const portrait = cam.aspect < 0.9;
+    if (portrait !== this.sentence.isPortrait) this.sentence.layout(portrait);
+    if (portrait) {
+      const f = CAM.look.clone().sub(CAM.pos).normalize();
+      const r = new Vector3().crossVectors(f, new Vector3(0, 1, 0)).normalize();
+      this.sentence.group.position.copy(CAM.pos).addScaledVector(f, 1.75).addScaledVector(r, -0.16).add(new Vector3(0, 0.4, 0));
+      this.sentence.group.scale.setScalar(0.5);
+    } else {
+      this.sentence.group.position.set(-1.62, 2.22, -0.85);
+      this.sentence.group.scale.setScalar(1);
+    }
     this.sentence.face(cam.position);
     this.pointer.endFrame();
   }

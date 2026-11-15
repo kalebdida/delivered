@@ -31,6 +31,7 @@ export const en = {
   'gain.letter.hintKeys': 'hold Space to write',
   'gain.doors.notYet': 'not yet',
   'gain.doors.hint': 'walk with WASD or the arrows',
+  'gain.doors.hintTouch': 'walk with the joystick',
   'gain.labor.hint': 'walk to someone and sit with them',
   'gain.labor.sit': 'E: sit with them',
   'gain.labor.sitTouch': 'sit',

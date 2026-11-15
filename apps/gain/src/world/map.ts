@@ -94,7 +94,7 @@ export class MapWorld {
       vertexShader: 'varying vec3 vWorld; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vWorld = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }',
       fragmentShader: SEA_FRAG,
     });
-    const sea = new Mesh(new PlaneGeometry(90, 60).rotateX(-Math.PI / 2), this.seaMat);
+    const sea = new Mesh(new PlaneGeometry(320, 260).rotateX(-Math.PI / 2), this.seaMat);
     sea.position.set(14, -0.02, 4);
     this.group.add(sea);
 
@@ -195,7 +195,7 @@ export class Streak {
   constructor(size = 0.08) {
     const mat = new ShaderMaterial({
       vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; vec4 c = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0); c.xy += position.xy * vec2(length(modelMatrix[0].xyz), length(modelMatrix[1].xyz)); gl_Position = projectionMatrix * c; }',
-      fragmentShader: 'varying vec2 vUv; void main(){ float d = length(vUv - 0.5); float a = exp(-d * 9.0) + exp(-d * 30.0) * 2.0; gl_FragColor = vec4(vec3(1.0, 0.86, 0.6) * a * 2.4, 1.0); }',
+      fragmentShader: 'varying vec2 vUv; void main(){ float d = length(vUv - 0.5); float a = (exp(-d * 9.0) + exp(-d * 30.0) * 2.0) * smoothstep(0.5, 0.32, d); gl_FragColor = vec4(vec3(1.0, 0.86, 0.6) * a * 2.4, 1.0); }',
       transparent: true,
       depthWrite: false,
       blending: AdditiveBlending,

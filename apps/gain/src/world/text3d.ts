@@ -1,6 +1,6 @@
 // 3D type (troika SDF text) with self-hosted fonts only. Nothing here ever fetches a font from a
 // CDN: every string goes through `sanitizeWord` or is fixed text whose glyphs the fonts contain.
-import { Color, type Material } from 'three';
+import { Color, MeshBasicMaterial, type Material } from 'three';
 import { Text } from 'troika-three-text';
 import serifItalic from '@fontsource/cormorant-garamond/files/cormorant-garamond-latin-400-italic.woff?url';
 import serifLight from '@fontsource/cormorant-garamond/files/cormorant-garamond-latin-300-normal.woff?url';
@@ -17,11 +17,14 @@ export interface TextOptions {
   letterSpacing?: number;
   maxWidth?: number;
   opacity?: number;
+  /** Draw over the scene (no depth test), like a title card in space. */
+  onTop?: boolean;
 }
 
 /** A troika Text with the room's defaults. Remember to `dispose()` it (Chapter roots do). */
 export function text3d(content: string, opts: TextOptions = {}): Text {
   const t = new Text();
+  if (opts.onTop) t.material = new MeshBasicMaterial({ depthTest: false, transparent: true });
   t.text = content;
   t.font = FONTS[opts.font ?? 'italic'];
   t.fontSize = opts.size ?? 0.12;

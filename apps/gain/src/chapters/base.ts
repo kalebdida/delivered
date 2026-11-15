@@ -23,8 +23,12 @@ export abstract class GChapter extends Chapter<GainCtx> {
     }
   }
 
-  /** Common entry: clear the HUD and filters, own the overlay cleanup. */
-  protected begin(ctx: GainCtx): void {
+  /**
+   * Common entry: clear the HUD and filters, own the overlay cleanup. The touch joystick only
+   * shows in chapters where the visitor walks (elsewhere it would sit over things to tap).
+   */
+  protected begin(ctx: GainCtx, opts: { walk?: boolean } = {}): void {
+    ctx.input.virtual?.el.classList.toggle('gn-vc-still', !opts.walk);
     this.events = [];
     ctx.ui.hud.clear();
     ctx.input.clearFilters();

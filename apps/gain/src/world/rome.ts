@@ -117,14 +117,14 @@ export class Rome {
     this.group.add(this.sky.mesh);
 
     // Ground: worn paving in the courtyard, packed earth beyond.
-    const floor = flagstones(512, 'praetorium');
-    for (const t of [floor.map, floor.normalMap, floor.roughnessMap]) t.repeat.set(40, 40);
+    const floor = flagstones(512, 'praetorium', '#857a6c', 0.6);
+    for (const t of [floor.map, floor.normalMap, floor.roughnessMap]) t.repeat.set(70, 70);
     const ground = new Mesh(new PlaneGeometry(400, 400).rotateX(-Math.PI / 2), new MeshStandardMaterial({ map: floor.map, normalMap: floor.normalMap, roughnessMap: floor.roughnessMap, color: '#c4b8aa', roughness: 1 }));
     ground.receiveShadow = true;
     this.group.add(ground);
 
     // The courtyard: a colonnade around it, the cell block at the north end.
-    const wall = masonry(512, 'praetorium-wall');
+    const wall = masonry(512, 'praetorium-wall', '#8a8074');
     const stone = new MeshStandardMaterial({ map: wall.map, normalMap: wall.normalMap, color: '#9a9088', roughness: 1 });
     wall.map.repeat.set(3, 1);
     const colGeo = new CylinderGeometry(0.32, 0.38, 6, 12);
@@ -187,8 +187,8 @@ export class Rome {
     const spear = new CylinderGeometry(0.018, 0.018, 2.6, 5);
     spear.translate(0.32, 1.3, 0.05);
     const parts: [BufferGeometry, MeshStandardMaterial][] = [
-      [cloak, litMaterial(new MeshStandardMaterial({ color: '#6a2a24', roughness: 0.9 }), '#F5C76B', 0.32, 'guard-cloak')],
-      [helm, litMaterial(new MeshStandardMaterial({ color: '#8a6c3a', metalness: 0.6, roughness: 0.35 }), '#FFE9B0', 0.9, 'guard-helm')],
+      [cloak, litMaterial(new MeshStandardMaterial({ color: '#6a2a24', roughness: 0.9 }), '#F5C76B', 0.17, 'guard-cloak')],
+      [helm, litMaterial(new MeshStandardMaterial({ color: '#8a6c3a', metalness: 0.6, roughness: 0.35 }), '#FFE9B0', 0.65, 'guard-helm')],
       [crest, litMaterial(new MeshStandardMaterial({ color: '#8a2020', roughness: 0.8 }), '#F5C76B', 0.4, 'guard-crest')],
       [spear, litMaterial(new MeshStandardMaterial({ color: '#4a3e30', roughness: 0.6 }), '#F5C76B', 0.5, 'guard-spear')],
     ];

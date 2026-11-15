@@ -65,7 +65,7 @@ function bake(size: number, height: Float32Array, albedo: Float32Array, rough: F
  * Rough-hewn ashlar masonry, tileable. One tile covers `TILE` metres of wall. Courses of uneven
  * height, stones of uneven width, chisel marks, chipped arrises, dark recessed mortar.
  */
-export function masonry(size = 512, seed = 'masonry'): SurfaceMaps {
+export function masonry(size = 512, seed = 'masonry', baseColor = '#3A3530'): SurfaceMaps {
   const rng = seededRandom(seed);
   const noise = createNoise(seed);
   // Courses: uneven heights that sum to the tile.
@@ -94,9 +94,9 @@ export function masonry(size = 512, seed = 'masonry'): SurfaceMaps {
   const H = new Float32Array(size * size);
   const A = new Float32Array(size * size * 3);
   const R = new Float32Array(size * size);
-  const base = hex('#3A3530');
-  const mortar = hex('#17130f');
-  const pale = hex('#6d655a');
+  const base = hex(baseColor);
+  const mortar = base.map((c) => c * 0.4) as [number, number, number];
+  const pale = base.map((c) => Math.min(255, c * 1.75)) as [number, number, number];
   for (let y = 0; y < size; y++) {
     let row = 0;
     while (row < rows.length - 1 && y >= rowEdges[row + 1]!) row++;
@@ -148,7 +148,7 @@ export function masonry(size = 512, seed = 'masonry'): SurfaceMaps {
 }
 
 /** Worn flagstones (jittered Voronoi), tileable, with grit and dark joints full of dirt. */
-export function flagstones(size = 512, seed = 'floor'): SurfaceMaps {
+export function flagstones(size = 512, seed = 'floor', baseColor = '#36302a', joint = 0.34): SurfaceMaps {
   const rng = seededRandom(seed);
   const noise = createNoise(seed);
   const N = 5;
@@ -157,8 +157,8 @@ export function flagstones(size = 512, seed = 'floor'): SurfaceMaps {
   const H = new Float32Array(size * size);
   const A = new Float32Array(size * size * 3);
   const R = new Float32Array(size * size);
-  const stone = hex('#36302a');
-  const dirt = hex('#120f0c');
+  const stone = hex(baseColor);
+  const dirt = stone.map((c) => c * joint) as [number, number, number];
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       const i = y * size + x;

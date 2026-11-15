@@ -111,9 +111,9 @@ export class House {
     this.sky.set({ zenith: '#04060f', horizon: '#141c36', ground: '#07070b', sun: '#CFE0FF', stars: 1, sunSize: 0.02, sunGlow: 0.3, sunIntensity: 2.6 });
     this.sky.setSun(34, 2.6);
     this.group.add(this.sky.mesh);
-    const wall = masonry(512, 'philippi-house');
+    const wall = masonry(512, 'philippi-house', '#a89880');
     const plaster = new MeshStandardMaterial({ map: wall.map, normalMap: wall.normalMap, color: '#c8b8a0', roughness: 1 });
-    const ground = flagstones(512, 'philippi-ground');
+    const ground = flagstones(512, 'philippi-ground', '#7a7064');
     for (const t of [ground.map, ground.normalMap]) t.repeat.set(10, 10);
     const floor = new Mesh(new PlaneGeometry(60, 60).rotateX(-Math.PI / 2), new MeshStandardMaterial({ map: ground.map, normalMap: ground.normalMap, color: '#8a7f72', roughness: 1 }));
     this.group.add(floor);
@@ -208,15 +208,17 @@ export class Courtyard {
     const rng = seededRandom('courtyard');
     this.sky = new Sky(400);
     this.sky.setTime(9.2);
+    this.sky.set({ zenith: '#6f97c9', horizon: '#f2d6aa', ground: '#b49c7e', sun: '#fff1d6', sunIntensity: 3.2, sunGlow: 0.6, stars: 0 });
     this.group.add(this.sky.mesh);
-    const ground = flagstones(512, 'courtyard');
-    for (const t of [ground.map, ground.normalMap, ground.roughnessMap]) t.repeat.set(8, 8);
-    const floor = new Mesh(new PlaneGeometry(40, 40).rotateX(-Math.PI / 2), new MeshStandardMaterial({ map: ground.map, normalMap: ground.normalMap, roughnessMap: ground.roughnessMap, color: '#d6c6ae', roughness: 1 }));
+    const ground = flagstones(512, 'courtyard', '#b9aa92', 0.72);
+    for (const t of [ground.map, ground.normalMap, ground.roughnessMap]) t.repeat.set(16, 16);
+    const floor = new Mesh(new PlaneGeometry(40, 40).rotateX(-Math.PI / 2), new MeshStandardMaterial({ map: ground.map, normalMap: ground.normalMap, roughnessMap: ground.roughnessMap, color: '#ffffff', roughness: 1 }));
     floor.receiveShadow = true;
     this.group.add(floor);
     // Low houses around the courtyard, plastered and warm in the morning.
-    const wall = masonry(512, 'courtyard-wall');
-    const plaster = new MeshStandardMaterial({ map: wall.map, normalMap: wall.normalMap, color: '#e2d2b8', roughness: 1 });
+    const wall = masonry(512, 'courtyard-wall', '#d9c9ae');
+    const plaster = new MeshStandardMaterial({ map: wall.map, normalMap: wall.normalMap, color: '#ffffff', roughness: 1 });
+    plaster.normalScale.set(0.45, 0.45);
     for (let i = 0; i < 14; i++) {
       const a = (i / 14) * Math.PI * 2;
       const r = 15.5 + rng() * 2;

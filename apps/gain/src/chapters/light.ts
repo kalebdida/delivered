@@ -37,6 +37,7 @@ export class Light extends GChapter {
     this.begin(ctx);
     const w = ctx.world;
     w.inCell = false;
+    w.air('map');
     this.map = new MapWorld();
     this.root.add(this.map.group);
     ctx.engine.exposure = 1.15;

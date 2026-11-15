@@ -24,12 +24,13 @@ export class Labor extends GChapter {
   private leaving = false;
 
   enter(ctx: GainCtx): void {
-    this.begin(ctx);
+    this.begin(ctx, { walk: true });
     const w = ctx.world;
     const b = ctx.quality.budget;
     this.near = this.sitting = -1;
     this.shown = this.leaving = false;
     w.inCell = false;
+    w.air('morning');
     w.figure.group.visible = true;
     w.figure.glow = 0.12;
     this.yard = new Courtyard({ maxInstances: b.maxInstances, shadows: b.shadows, shadowMapSize: b.shadowMapSize });
@@ -41,7 +42,7 @@ export class Labor extends GChapter {
     w.figure.sit = w.figure.kneel = 0;
     w.figure.settle();
     ctx.rig.follow(w.figure.group, { offset: new Vector3(0, 3.3, 4.6), lookOffset: new Vector3(0, 0.9, -2.4), spring: 'gentle' }, true);
-    ctx.rig.setFov(50);
+    ctx.rig.setFov(ctx.engine.camera.aspect < 0.9 ? 72 : 50);
     ctx.input.setVirtualButtons([{ id: 'secondary', label: ctx.t('gain.labor.sitTouch'), size: 'large', icon: 'dot' }]);
     this.own(ctx.audio.crowd({ level: 0.1, voices: 6 }));
     this.own(ctx.audio.wind(0.08));

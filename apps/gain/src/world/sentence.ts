@@ -32,12 +32,18 @@ class Blank {
   private blink = false;
   private t = 0;
 
+  /** Move the blank so its rule starts at (x, y). */
+  place(x: number, y: number): void {
+    this.rule.position.set(x + BLANK / 2, y - SIZE * 0.42, 0);
+    this.word.position.set(x + BLANK / 2, y, 0.002);
+  }
+
   constructor(parent: Group, x: number, y: number) {
     this.ruleMat = new MeshBasicMaterial({ color: new Color('#F7F3EA'), transparent: true, opacity: 0.4, depthWrite: false, fog: false });
     this.rule = new Mesh(new PlaneGeometry(BLANK, 0.006), this.ruleMat);
     this.rule.position.set(x + BLANK / 2, y - SIZE * 0.42, 0);
     this.rule.renderOrder = 30;
-    this.word = text3d('', { size: SIZE * 1.08, anchorX: 'center', anchorY: 'middle' });
+    this.word = text3d('', { size: SIZE * 1.08, anchorX: 'center', anchorY: 'middle', onTop: true });
     this.word.position.set(x + BLANK / 2, y, 0.002);
     parent.add(this.rule, this.word);
   }
@@ -96,25 +102,60 @@ export class Sentence {
   readonly group = new Group();
   readonly blanks: [Blank, Blank];
   private readonly parts: Text[] = [];
+  private readonly lines: { prefix: Text; mark: Text }[] = [];
+  private portrait = false;
   private opacity = 0;
   private targetOpacity = 1;
 
   /** `a` = "For to me to live is", `b` = "and to die is" (registered partials of 1:21). */
   constructor(a: string, b: string) {
     const lineH = SIZE * 1.9;
-    const p1 = text3d(a, { size: SIZE, anchorX: 'right', anchorY: 'middle' });
+    const p1 = text3d(a, { size: SIZE, anchorX: 'right', anchorY: 'middle', onTop: true });
     p1.position.set(-GAP, lineH / 2, 0);
-    const p2 = text3d(b, { size: SIZE, anchorX: 'right', anchorY: 'middle' });
+    const p2 = text3d(b, { size: SIZE, anchorX: 'right', anchorY: 'middle', onTop: true });
     p2.position.set(-GAP, -lineH / 2, 0);
-    const comma = text3d(',', { size: SIZE, anchorX: 'left', anchorY: 'middle' });
+    const comma = text3d(',', { size: SIZE, anchorX: 'left', anchorY: 'middle', onTop: true });
     comma.position.set(GAP + BLANK + 0.01, lineH / 2, 0);
-    const stop = text3d('.', { size: SIZE, anchorX: 'left', anchorY: 'middle' });
+    const stop = text3d('.', { size: SIZE, anchorX: 'left', anchorY: 'middle', onTop: true });
     stop.position.set(GAP + BLANK + 0.01, -lineH / 2, 0);
     this.parts.push(p1, p2, comma, stop);
+    this.lines.push({ prefix: p1, mark: comma }, { prefix: p2, mark: stop });
     this.group.add(p1, p2, comma, stop);
     this.blanks = [new Blank(this.group, GAP, lineH / 2), new Blank(this.group, GAP, -lineH / 2)];
-    // Centre the whole block on the group origin.
-    this.group.children.forEach((c) => (c.position.x -= BLANK / 2 - 0.25));
+    this.layout(false);
+    // The sentence is the room's title card in space: it draws over whatever floats in front of it.
+    for (const t of [...this.parts, ...this.blanks.flatMap((b) => [b.word, b.rule])]) t.renderOrder = 40;
+    for (const b of this.blanks) (b.rule.material as MeshBasicMaterial).depthTest = false;
+  }
+
+  /**
+   * Landscape: two lines, the blanks in a column to the right of the words. Portrait: four
+   * centred rows (words, blank, words, blank) so nothing falls off a narrow screen.
+   */
+  layout(portrait: boolean): void {
+    this.portrait = portrait;
+    const lineH = SIZE * 1.9;
+    const shift = BLANK / 2 - 0.25;
+    this.lines.forEach((l, i) => {
+      if (portrait) {
+        const y = lineH * (1.5 - i * 2);
+        l.prefix.anchorX = 'center';
+        l.prefix.position.set(0, y, 0);
+        this.blanks[i]!.place(-BLANK / 2, y - lineH);
+        l.mark.position.set(BLANK / 2 + 0.01, y - lineH, 0);
+      } else {
+        const y = lineH * (0.5 - i);
+        l.prefix.anchorX = 'right';
+        l.prefix.position.set(-GAP - shift, y, 0);
+        this.blanks[i]!.place(GAP - shift, y);
+        l.mark.position.set(GAP + BLANK + 0.01 - shift, y, 0);
+      }
+      l.prefix.sync();
+    });
+  }
+
+  get isPortrait(): boolean {
+    return this.portrait;
   }
 
   /** Fade the whole sentence in or out. */

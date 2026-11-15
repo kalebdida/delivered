@@ -89,9 +89,21 @@ export class World {
     for (let i = 0; i < 240; i++) this.stepChains(1 / 60);
   }
 
+  /** Distance fog for where we are: the cell's close dark air, or the open night, map or morning. */
+  air(kind: 'cell' | 'night' | 'map' | 'morning'): void {
+    const presets = {
+      cell: { ...FOG_PRESETS.cell, density: 0.045, heightStrength: 0.4, falloff: 1.1 },
+      night: { color: '#0a0e1a', density: 0.0065, base: 0, falloff: 0.2, heightStrength: 0.25 },
+      map: { color: '#070a14', density: 0.0035, base: 0, falloff: 1, heightStrength: 0 },
+      morning: { color: '#eadcc2', density: 0.012, base: 0, falloff: 0.4, heightStrength: 0.2 },
+    } as const;
+    this.fog.set(presets[kind]);
+  }
+
   /** Show or hide the cell (the later chapters leave it). */
   set inCell(v: boolean) {
     this.cellGroup.visible = v;
+    if (v) this.air('cell');
     // The visitor goes with the cell; a chapter outside it shows them again if it needs to.
     this.figure.group.visible = v;
     for (const c of this.chains) c.mesh.visible = v;

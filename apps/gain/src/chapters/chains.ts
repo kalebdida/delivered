@@ -109,6 +109,7 @@ export class Chains extends GChapter {
     const { ctx } = this;
     const w = ctx.world;
     w.inCell = false;
+    w.air('night');
     this.rome = new Rome({ maxInstances: ctx.quality.budget.maxInstances });
     this.root.add(this.rome.group);
     this.phase = 'guard';

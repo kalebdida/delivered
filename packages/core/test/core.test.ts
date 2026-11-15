@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { Loop } from '../src/loop';
+import { Loop, MAX_FRAME_DT, clampFrameDt } from '../src/loop';
 import { breath, easing, seededRandom, createNoise, Spring, SPRING_PRESETS } from '../src/math';
 import { stepAdaptiveDpr, tierFromGpu, QUALITY_BUDGETS } from '../src/quality';
 import { FlashLimiter, allComplete, isComplete, markComplete } from '../src/safety';
@@ -82,6 +82,54 @@ describe('loop', () => {
     loop.timeScale = 0.2;
     loop.advance(0.1); // 0.02 scaled seconds → 1 step
     expect(fixed).toHaveBeenCalledTimes(4);
+  });
+  it('clamps frame deltas to [0, 0.1] seconds', () => {
+    expect(MAX_FRAME_DT).toBe(0.1);
+    expect(clampFrameDt(-1.5)).toBe(0);
+    expect(clampFrameDt(0)).toBe(0);
+    expect(clampFrameDt(Number.NaN)).toBe(0);
+    expect(clampFrameDt(1 / 60)).toBeCloseTo(1 / 60);
+    expect(clampFrameDt(0.1)).toBe(0.1);
+    expect(clampFrameDt(0.25)).toBe(0.1);
+    expect(clampFrameDt(Number.POSITIVE_INFINITY)).toBe(0.1);
+  });
+  it('never hands a negative or oversized dt to callbacks when driven directly', () => {
+    const loop = new Loop({ autoPause: false });
+    const dts: number[] = [];
+    loop.onFrame((dt) => dts.push(dt));
+    loop.advance(-1.5);
+    loop.advance(3);
+    expect(dts).toEqual([0, 0.1]);
+    expect(loop.realTime).toBeCloseTo(0.1);
+    expect(loop.time).toBeGreaterThanOrEqual(0);
+  });
+  it('gives the first frame dt 0 when its timestamp is earlier than start()', () => {
+    // Headless Chromium after a long shader compile: the first RAF timestamp is ~1.5 s before
+    // the performance.now() taken in start().
+    const queue: FrameRequestCallback[] = [];
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => queue.push(cb));
+    vi.stubGlobal('cancelAnimationFrame', () => {});
+    const now = vi.spyOn(performance, 'now').mockReturnValue(10_000);
+    try {
+      const loop = new Loop({ autoPause: false });
+      const dts: number[] = [];
+      const fixed = vi.fn();
+      loop.onFixed(fixed);
+      loop.onFrame((dt) => dts.push(dt));
+      loop.start();
+      queue.shift()!(8_500); // 1.5 s in the past
+      queue.shift()!(8_500 + 1000 / 60); // next frame measures from the first one
+      queue.shift()!(8_500 + 1000 / 60 + 2000); // a 2 s stall
+      expect(dts[0]).toBe(0);
+      expect(dts[1]).toBeCloseTo(1 / 60);
+      expect(dts[2]).toBe(0.1);
+      expect(fixed.mock.calls.every(([dt]) => dt > 0)).toBe(true);
+      expect(loop.time).toBeGreaterThanOrEqual(0);
+      loop.dispose();
+    } finally {
+      now.mockRestore();
+      vi.unstubAllGlobals();
+    }
   });
 });
 

@@ -21,6 +21,19 @@ export interface LoopOptions {
   autoPause?: boolean;
 }
 
+/** Longest frame delta the loop will pass on, in seconds. Anything longer (a stall, a tab switch, a
+ * shader compile) is treated as one slow frame instead of a jump. */
+export const MAX_FRAME_DT = 0.1;
+
+/**
+ * Clamp a frame delta to `[0, MAX_FRAME_DT]` seconds. The first requestAnimationFrame timestamp can
+ * be earlier than the `performance.now()` taken in `start()` when the start follows a long blocking
+ * task, which would otherwise give a negative delta. NaN becomes 0.
+ */
+export function clampFrameDt(seconds: number): number {
+  return seconds > 0 ? Math.min(seconds, MAX_FRAME_DT) : 0;
+}
+
 export class Loop {
   /** Global time scale. 1 is normal, 0.2 is slow motion, 0 freezes simulation. */
   timeScale = 1;
@@ -74,7 +87,7 @@ export class Loop {
     const tick = (now: number) => {
       if (!this.running) return;
       this.raf = requestAnimationFrame(tick);
-      const delta = Math.min((now - this.last) / 1000, 0.25);
+      const delta = clampFrameDt((now - this.last) / 1000);
       this.last = now;
       this.advance(delta);
     };
@@ -88,9 +101,10 @@ export class Loop {
 
   /**
    * Advance by `delta` real seconds. Called by the RAF tick; exposed so tests and the screenshot
-   * tool can drive time deterministically.
+   * tool can drive time deterministically. `delta` is clamped to `[0, MAX_FRAME_DT]`.
    */
   advance(delta: number): void {
+    delta = clampFrameDt(delta);
     this.realTime += delta;
     this.frameMs += (delta * 1000 - this.frameMs) * 0.1;
     const scaled = delta * this.timeScale;

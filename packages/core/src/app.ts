@@ -5,7 +5,7 @@ import { Director, type Chapter, type DirectorOptions } from './director';
 import { createEngine, type Engine } from './engine';
 import { t } from './i18n';
 import { Input } from './input';
-import { Loop } from './loop';
+import { Loop, clampFrameDt } from './loop';
 import { Physics } from './physics';
 import { GRADES, PostFX, type GradeParams, type PostFXPreset } from './postfx';
 import { Quality, type QualityTier } from './quality';
@@ -161,7 +161,7 @@ export async function createApp<Ctx extends CoreContext = CoreContext>(opts: App
   let last = performance.now();
   loop.onFrame((dt) => {
     const now = performance.now();
-    const realDt = Math.min((now - last) / 1000, 0.25);
+    const realDt = clampFrameDt((now - last) / 1000);
     last = now;
     input.update(realDt);
     physics?.sync();

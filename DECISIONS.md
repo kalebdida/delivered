@@ -142,6 +142,16 @@ Note for WRETCHED: the prompt pairs θέλω with Romans 7:18, where the Greek h
   something held open. It is the favicon, the seal on completed portals and the loader's emblem.
 - **Chapter transitions default to `dissolve`**; rooms choose `ink` or `light` per chapter.
 
+## Core requests (merged before UNDERNEATH)
+- **Frame delta clamp (UNDERNEATH #1, fixed).** The first requestAnimationFrame timestamp can be
+  earlier than the `performance.now()` taken in `Loop.start` when the start follows a long blocking
+  task (about -1.5 s after shader compiles in headless Chromium), so chapters got a negative `dt`.
+  `clampFrameDt` now clamps every frame delta to `[0, 0.1]` s, in the RAF tick, in `Loop.advance`
+  and for the `realDt` that `createApp` hands to input, the rig and post FX. The ceiling dropped
+  from 0.25 s to 0.1 s: a stall now reads as one slow frame rather than a jump. WRETCHED had no
+  local clamp and already gets its `dt` from the loop; UNDERNEATH's local `Math.max(0, dt)` was
+  removed.
+
 ## Core requests (merged after WRETCHED)
 - **HeightFog program keys (WRETCHED #1, fixed).** `apply` now captures the material's key before
   patching (its own `customProgramCacheKey`, or else the source of its previous `onBeforeCompile`)

@@ -1,0 +1,15 @@
+{
+  "name": "@delivered/underneath",
+  "version": "1.0.0",
+  "private": true,
+  "author": "Kaleb Dida (@kalebdida)",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@delivered/core": "workspace:*"
+  }
+}

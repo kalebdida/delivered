@@ -7,6 +7,7 @@ import {
   BufferAttribute,
   BufferGeometry,
   CapsuleGeometry,
+  ConeGeometry,
   Color,
   DoubleSide,
   Group,
@@ -263,7 +264,7 @@ export class Figure {
     this.torso = new Mesh(new LatheGeometry(tp, 20), this.robe);
     this.torso.castShadow = this.torso.receiveShadow = true;
     // Mantle: the heavy fold of cloth over the shoulders.
-    const mp = [[0.0, 0.02], [0.1, 0.02], [0.2, -0.05], [0.24, -0.13], [0.22, -0.17], [0.0, -0.17]].map(([x, y]) => new Vector2(x, y));
+    const mp = [[0.0, 0.03], [0.09, 0.03], [0.17, -0.02], [0.215, -0.1], [0.2, -0.15], [0.0, -0.15]].map(([x, y]) => new Vector2(x, y));
     this.mantle = new Mesh(new LatheGeometry(mp, 24), this.cloakMat);
     this.mantle.castShadow = true;
     this.cloak = new Cloak(this.cloakMat);
@@ -279,7 +280,14 @@ export class Figure {
     const peak = new Mesh(new SphereGeometry(0.11, 14, 10), this.cloakMat);
     peak.position.set(0, 0.035, -0.045);
     peak.scale.set(1.0, 1.25, 1.15);
-    this.hood.add(shell, inner, peak);
+    // A soft point at the back of the hood, and its fold down the nape: from behind it reads as a hood, not a ball.
+    const tip = new Mesh(new ConeGeometry(0.075, 0.16, 12), this.cloakMat);
+    tip.position.set(0, 0.11, -0.1);
+    tip.rotation.x = -0.75;
+    const nape = new Mesh(new ConeGeometry(0.12, 0.2, 14, 1, true), this.cloakMat);
+    nape.position.set(0, -0.1, -0.06);
+    nape.rotation.x = 0.15;
+    this.hood.add(shell, inner, peak, tip, nape);
     this.hood.traverse((o) => ((o as Mesh).castShadow = true));
 
     this.limbs = {

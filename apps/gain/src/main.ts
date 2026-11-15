@@ -1,5 +1,21 @@
-// Placeholder for the GAIN room. The room's agent replaces this file with the real experience
-// (see apps/gain/PROMPT.md and packages/core/README.md → "Booting a room").
-import { mountPlaceholder } from '@delivered/core/placeholder';
+import '@delivered/core/styles.css';
+import { createApp, markComplete } from '@delivered/core';
+import { Still } from './chapters/still';
+import { World, type GainCtx } from './world/world';
 
-mountPlaceholder({ room: 'gain', title: 'GAIN', ref: 'Philippians 1:21' });
+const ctx = await createApp<GainCtx>({
+  appId: 'gain',
+  title: 'GAIN',
+  reverb: 'smallCell',
+  transition: 'dissolve',
+  chapters: [new Still()],
+  setup: (c, progress) => {
+    c.world = new World(c);
+    progress(1);
+  },
+  onFrame: (dt, c) => c.world.update(dt),
+  onEnd: () => markComplete('gain'),
+});
+
+// Test hook for headless checks (never on a normal visit).
+if (new URLSearchParams(location.search).has('test')) (globalThis as { __gain?: unknown }).__gain = ctx;

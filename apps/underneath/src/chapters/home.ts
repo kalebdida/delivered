@@ -128,8 +128,7 @@ export class Underneath extends UChapter {
     this.root.add(this.beam);
   }
 
-  update(rawDt: number): void {
-    const dt = Math.max(0, rawDt);
+  update(dt: number): void {
     const { ctx } = this;
     const w = this.w;
     const real = ctx.loop.timeScale > 0 ? dt / ctx.loop.timeScale : dt;
@@ -218,8 +217,7 @@ class Curtain {
     this.mesh.frustumCulled = false;
     this.mesh.castShadow = true;
   }
-  update(rawDt: number): void {
-    const dt = Math.max(0, rawDt);
+  update(dt: number): void {
     this.cloth.step(Math.min(dt, 1 / 30));
     (this.geo.attributes.position as BufferAttribute).needsUpdate = true;
     this.geo.computeVertexNormals();
@@ -419,8 +417,7 @@ export class Dwelling extends UChapter {
     });
   }
 
-  update(rawDt: number): void {
-    const dt = Math.max(0, rawDt);
+  update(dt: number): void {
     const { ctx } = this;
     const { input, ui, audio, t } = ctx;
     const w = this.w;

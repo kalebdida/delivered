@@ -291,8 +291,7 @@ export class Fall extends FallChapter {
     ctx.audio.crumble(0.6);
   }
 
-  update(rawDt: number): void {
-    const dt = Math.max(0, rawDt);
+  update(dt: number): void {
     const { ctx } = this;
     const fall = this.runner.fall;
     this.runEvents();
@@ -336,8 +335,7 @@ export class Rider extends FallChapter {
     }
   }
 
-  update(rawDt: number): void {
-    const dt = Math.max(0, rawDt);
+  update(dt: number): void {
     const { ctx } = this;
     const w = this.w;
     const fall = this.runner.fall;

@@ -407,8 +407,7 @@ export class Playground extends UChapter {
     this.ctx.audio.pluck(392, { level: 0.15 });
   }
 
-  update(rawDt: number): void {
-    const dt = Math.max(0, rawDt);
+  update(dt: number): void {
     const { ctx } = this;
     const { input, ui, audio, t } = ctx;
     const w = this.w;

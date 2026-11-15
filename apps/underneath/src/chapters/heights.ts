@@ -137,8 +137,7 @@ export class Lean extends UChapter {
     this.at(5.5, () => ctx.ui.whisper.show(ctx.t('underneath.move'), { duration: 6 }));
   }
 
-  update(rawDt: number): void {
-    const dt = Math.max(0, rawDt);
+  update(dt: number): void {
     const { input, audio, ui, t } = this.ctx;
     const w = this.w;
     this.runEvents();
@@ -373,8 +372,7 @@ export class GiveWay extends UChapter {
     for (const i of this.isles) i.slab.update(dt);
   }
 
-  update(rawDt: number): void {
-    const dt = Math.max(0, rawDt);
+  update(dt: number): void {
     const { audio, rig } = this.ctx;
     const w = this.w;
     this.runEvents();

@@ -100,8 +100,7 @@ export class World {
     return { dx, dz };
   }
 
-  update(rawDt: number): void {
-    const dt = Math.max(0, rawDt);
+  update(dt: number): void {
     const { ctx, visitor } = this;
     const real = ctx.loop.timeScale > 0 ? dt / ctx.loop.timeScale : dt;
     visitor.update(dt);

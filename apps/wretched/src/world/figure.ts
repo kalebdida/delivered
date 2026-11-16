@@ -1,6 +1,6 @@
 // The visitor: a figure of soft matte clay-light. Procedural walk cycle with a two-bone IK foot
 // plant on the terrain, and a few blendable poses (strain, strike, kneel, look up, fall).
-import { CapsuleGeometry, Color, Group, Mesh, MeshStandardMaterial, SphereGeometry, Vector3, type Object3D } from 'three';
+import { CapsuleGeometry, Color, DoubleSide, Group, LatheGeometry, Mesh, MeshStandardMaterial, SphereGeometry, Vector2, Vector3, type Object3D } from 'three';
 import { clamp, damp } from '@delivered/core';
 import { heightAt } from './terrain';
 
@@ -27,8 +27,11 @@ export interface Pose {
 
 const ZERO: Pose = { lean: 0, kneel: 0, head: 0, reach: 0, fall: 0, strike: 0, strain: 0 };
 
-export function clayMaterial(): MeshStandardMaterial & { userData: { rim: { value: Color }; rimPower: { value: number } } } {
-  const m = new MeshStandardMaterial({ color: '#d8cdbd', roughness: 0.88, metalness: 0, emissive: new Color('#4a3622'), emissiveIntensity: 1 });
+export function clayMaterial(
+  color = '#d8cdbd',
+  emissive = '#4a3622',
+): MeshStandardMaterial & { userData: { rim: { value: Color }; rimPower: { value: number } } } {
+  const m = new MeshStandardMaterial({ color, roughness: 0.88, metalness: 0, emissive: new Color(emissive), emissiveIntensity: 1 });
   const rim = { value: new Color('#ffd9a0').multiplyScalar(0.8) };
   const rimPower = { value: 2.6 };
   m.userData.rim = rim;
@@ -63,6 +66,8 @@ interface Leg {
 export class Figure {
   readonly group = new Group();
   readonly material = clayMaterial();
+  /** The cloak and hood: a heavier, darker cloth than the clay, double-sided so the hood reads hollow. */
+  readonly cloth = clayMaterial('#b9ab98', '#2e2116');
   readonly hips = new Group();
   readonly chest = new Group();
   readonly head = new Group();
@@ -107,6 +112,40 @@ export class Figure {
     const neck = new Mesh(new CapsuleGeometry(0.045, 0.08, 4, 8), m);
     neck.position.y = -0.04;
     this.head.add(skull, neck);
+
+    // The silhouette: a hooded cloak. A mantle over the shoulders, a skirt that flares from the
+    // hips to below the knee (wide enough for the stride), and a deep hood that shades the face.
+    const cloth = this.cloth;
+    cloth.side = DoubleSide;
+    const lathe = (pts: [number, number][], segs = 28) => {
+      const mesh = new Mesh(new LatheGeometry(pts.map(([r, y]) => new Vector2(r, y)), segs), cloth);
+      mesh.castShadow = true;
+      return mesh;
+    };
+    const mantle = lathe([[0.07, 0.64], [0.15, 0.6], [0.25, 0.53], [0.29, 0.42], [0.27, 0.22], [0.23, 0.02], [0.22, -0.06]]);
+    mantle.scale.set(1, 1, 0.78);
+    this.chest.add(mantle);
+    const skirt = lathe([[0.2, 0.02], [0.23, -0.12], [0.28, -0.32], [0.33, -0.52], [0.36, -0.66]]);
+    skirt.scale.set(1, 1, 0.92);
+    this.hips.add(skirt);
+    // Hood: a sphere opened toward the face (+z), drawn back into a soft point behind the head.
+    const hood = new Mesh(new SphereGeometry(0.165, 28, 20, Math.PI / 2 + 0.75, Math.PI * 2 - 1.5, 0, Math.PI * 0.78), cloth);
+    hood.scale.set(1, 1.12, 1.12);
+    hood.position.set(0, 0.075, -0.025);
+    hood.castShadow = true;
+    // Draw the crown back into a soft peak so the hood reads as cloth, not a larger skull.
+    const hp = hood.geometry.attributes.position!;
+    for (let i = 0; i < hp.count; i++) {
+      const y = hp.getY(i);
+      const z = hp.getZ(i);
+      if (y > 0 && z < 0.02) {
+        const k = (y / 0.165) * Math.min(1, (0.02 - z) / 0.12);
+        hp.setY(i, y + k * 0.05);
+        hp.setZ(i, z - k * 0.07);
+      }
+    }
+    hood.geometry.computeVertexNormals();
+    this.head.add(hood);
 
     for (const side of [-1, 1]) {
       const upper = new Group();
@@ -238,6 +277,7 @@ export class Figure {
   dispose(): void {
     this.group.traverse((o) => (o as Mesh).geometry?.dispose());
     this.material.dispose();
+    this.cloth.dispose();
   }
 }
 

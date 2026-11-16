@@ -26,7 +26,7 @@ export class Threshold extends WChapter {
     this.at(5.6, () =>
       void ctx.ui.scripture.show({ ref, text: partial(ref, 1), align: 'center', duration: 5.4, original: { text: 'τίς με ῥύσεται', lang: 'grc' } }),
     );
-    this.at(8.5, () => ctx.postfx.fadeTo('black', 0, 4));
+    this.at(6.5, () => ctx.postfx.fadeTo('black', 0, 3));
     this.own(() => ctx.postfx.fadeTo('black', 0, 0));
   }
 
@@ -101,6 +101,8 @@ export class Dont extends WChapter {
     await this.begin(ctx, { z: PATH.want, chained: true, weight: 0.3, reveal: 0.32 });
     this.card({ word: 'οὐ … ποιῶ', lang: 'grc', translit: 'ou … poiō', english: 'but I don’t do', ref: 'Romans 7:19', number: 2 });
     ctx.input.addFilter(this.w.corruption());
+    // Off to the side and higher, so the chain and the double dragging behind share the frame.
+    if (innerWidth > innerHeight) ctx.rig.follow(this.w.figure.group, { offset: new Vector3(4.2, 3.4, 8.4), lookOffset: new Vector3(-0.4, 0.4, 1.2), spring: 'smooth' }, true);
     this.w.heart = this.own(ctx.audio.heartbeat(68, { level: 0.35 }));
     this.own(() => (this.w.heart = null));
     // For the screenshot: a betrayal at the key moment.
@@ -111,6 +113,7 @@ export class Dont extends WChapter {
     const { ctx, w } = this;
     ctx.postfx.glitchBurst(0.7, 0.6);
     w.double.flare(1);
+    w.double.reveal = 0.7;
     ctx.ui.hud.set('bottom-center', ctx.t('wretched.hud.betray', { pressed: '↑', went: '↓' }));
   }
 

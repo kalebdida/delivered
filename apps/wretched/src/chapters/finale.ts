@@ -37,7 +37,7 @@ function glowMaterial(color: string, power = 2.4): ShaderMaterial {
 // -------------------------------------------------------------------------------------------------
 export class Thanks extends WChapter {
   readonly id = 'thanks';
-  override keyMomentAt = 9.5;
+  override keyMomentAt = 10;
   override transitionIn = 'light' as const;
   private cross = new Group();
   private seam!: Mesh;
@@ -71,7 +71,7 @@ export class Thanks extends WChapter {
 
     // The seam in the sky above the hill, and the cross of light that descends through it.
     const z = PATH.arena - 46;
-    this.mats = [glowMaterial('#FFE9B0', 2), glowMaterial('#FFF4DA', 3.2), glowMaterial('#FFF4DA', 3.2)];
+    this.mats = [glowMaterial('#FFE9B0', 2), glowMaterial('#FFE3A6', 3.2), glowMaterial('#FFE3A6', 3.2)];
     this.seam = new Mesh(new PlaneGeometry(1, 260), this.mats[0]);
     this.seam.position.set(0, 120, z - 30);
     const vertical = new Mesh(new PlaneGeometry(5, 64), this.mats[1]);
@@ -83,8 +83,8 @@ export class Thanks extends WChapter {
     this.beam = this.own(new LightShaft({ color: '#FFE9B0', length: 10, radiusTop: 0.5, radiusBottom: 0.9, intensity: 0, motes: 160, seed: 'deliver' }));
     this.root.add(this.seam, this.cross, this.beam.group);
     this.pad = this.own(ctx.audio.drone(130.8, 'choir', { level: 0 }));
-    ctx.rig.follow(w.figure.group, { offset: new Vector3(1.8, 1.1, 6.2), lookOffset: new Vector3(0, 10.5, -12), spring: 'heavy' }, true);
-    ctx.rig.setFov(60, 6);
+    ctx.rig.follow(w.figure.group, { offset: new Vector3(2.2, 1.5, 6.8), lookOffset: new Vector3(0, 6, -12), spring: 'heavy' }, true);
+    ctx.rig.setFov(64, 6);
     this.own(() => ctx.rig.setFov(45, 2));
 
     // ---- the timeline (see PLAN.md) ----
@@ -139,6 +139,8 @@ export class Thanks extends WChapter {
     ctx.audio.bell(523.3, { level: 0.6 });
     haptic([20, 40, 20]);
     w.chain.gold[0] = 1;
+    // Colour returns first where the light touches: enough saturation for the gold to read.
+    ctx.postfx.params.saturation = 0.75;
     w.detach();
     this.freed = true;
     w.chain.releaseEnd();
@@ -163,7 +165,7 @@ export class Thanks extends WChapter {
     this.seam.scale.x = 0.5 + smoothstep(0.5, 6, t) * 9;
     this.crossLevel = smoothstep(1.5, 5, t);
     const descent = smoothstep(1.5, 7.5, t);
-    this.cross.position.y = lerp(170, 46, descent * descent * (3 - 2 * descent));
+    this.cross.position.y = lerp(170, 38, descent * descent * (3 - 2 * descent));
     this.cross.lookAt(cam.x, this.cross.position.y, cam.z);
     this.seam.lookAt(cam.x, this.seam.position.y, cam.z);
     this.mats[0]!.uniforms.uLevel!.value = this.seamLevel;
@@ -186,7 +188,7 @@ export class Thanks extends WChapter {
     // Gold links fade away one by one, as dust.
     for (let i = 0; i < LINKS; i++) {
       if (w.chain.gold[i]! > 0) {
-        w.chain.gone[i] = Math.min(1, w.chain.gone[i]! + dt * 0.7);
+        w.chain.gone[i] = Math.min(1, w.chain.gone[i]! + dt * 0.22);
         if (Math.random() < dt * 8 && w.chain.gone[i]! < 1) w.sparks.emit(w.chain.linkPosition(i, new Vector3()), 2, GOLD, { speed: 0.3, up: 0.6, life: 2 });
       }
     }
@@ -282,7 +284,7 @@ export class NoCondemnation extends WChapter {
     w.figure.target.head = -0.35;
     ctx.ui.whisper.hide();
     ctx.audio.chord([130.8, 196, 261.6, 329.6, 392, 523.3], { duration: 12, level: 0.4 });
-    ctx.rig.follow(w.figure.group, { ...(window.innerWidth < window.innerHeight ? { offset: new Vector3(3.4, 2.4, 7.4), lookOffset: new Vector3(-1.2, 2.6, -2) } : { offset: new Vector3(3.2, 1.2, 3.6), lookOffset: new Vector3(-1.4, 1.6, -2) }), spring: 'heavy' });
+    ctx.rig.follow(w.figure.group, { ...(window.innerWidth < window.innerHeight ? { offset: new Vector3(3.4, 2.4, 7.4), lookOffset: new Vector3(-1.2, 2.6, -2) } : { offset: new Vector3(3.2, 1.2, 3.6), lookOffset: new Vector3(-2.6, 1.5, -2.4) }), spring: 'heavy' });
     const s = this.summitAt;
     this.at(s + 0.5, () => ctx.postfx.fadeTo('white', 0.08, 5));
     this.at(s + 1, () => void ctx.ui.scripture.show({ ref: 'Romans 8:1', position: 'lower', duration: 7.5 }));

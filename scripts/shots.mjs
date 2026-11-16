@@ -10,6 +10,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
+import { SITE_BASE } from './site-base.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const ALL = { hub: '/', wretched: '/wretched/', underneath: '/underneath/', gain: '/gain/', demo: '/demo/' };
@@ -29,7 +30,7 @@ if (!base) {
   }
   const port = 4317;
   server = spawn(process.execPath, [`${root}scripts/preview.mjs`, String(port)], { stdio: 'ignore' });
-  base = `http://localhost:${port}`;
+  base = `http://localhost:${port}${SITE_BASE.slice(0, -1)}`;
   await new Promise((r) => setTimeout(r, 700));
 }
 

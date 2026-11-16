@@ -123,10 +123,19 @@ export class Settings {
   }
 }
 
+/**
+ * The hub's URL. Each room is built with base `<site>/<room>/`, so the hub is one level up
+ * (`/delivered/` on GitHub Pages, `/` on a domain root and in dev).
+ */
+export function hubUrl(): string {
+  const base = import.meta.env?.BASE_URL ?? '/';
+  return base === '/' ? '/' : base.replace(/[^/]+\/$/, '');
+}
+
 export interface ChromeOptions {
   audio?: AudioEngine;
   settings?: Settings;
-  /** Link back to the hub (default '/'). Pass null to hide (the hub itself). */
+  /** Link back to the hub (default: the hub, one level above this room's base). Pass null to hide (the hub itself). */
   home?: string | null;
 }
 
@@ -149,7 +158,7 @@ export class Chrome {
     const left = h('div', {});
     const right = h('div', {});
     if (this.opts.home !== null) {
-      const home = button({ label: t('core.end.back'), variant: 'icon', icon: 'back', href: this.opts.home ?? '/' });
+      const home = button({ label: t('core.end.back'), variant: 'icon', icon: 'back', href: this.opts.home ?? hubUrl() });
       left.appendChild(home);
     }
     if (this.opts.audio) {
@@ -196,7 +205,7 @@ export interface EndCardOptions {
   readLabel?: string;
   /** Called by Share; typically builds and shares a Postcard. */
   onShare?: () => void;
-  /** Hub URL (default '/'). */
+  /** Hub URL (default: the hub, one level above this room's base). */
   home?: string;
 }
 
@@ -216,7 +225,7 @@ export class EndCard {
       'div',
       { class: 'dl-end__actions dl-rise', style: '--i:12' },
       button({ label: t('core.end.replay'), variant: 'text', icon: 'replay', onClick: () => opts.onReplay() }),
-      button({ label: t('core.end.back'), variant: 'text', icon: 'back', href: opts.home ?? '/' }),
+      button({ label: t('core.end.back'), variant: 'text', icon: 'back', href: opts.home ?? hubUrl() }),
       button({ label: opts.readLabel ?? t('core.end.read'), variant: 'text', icon: 'book', href: opts.readUrl, external: true }),
       opts.onShare ? button({ label: t('core.end.share'), variant: 'text', icon: 'share', onClick: () => opts.onShare!() }) : null,
     );

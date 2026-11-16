@@ -66,7 +66,7 @@ export interface AppOptions<Ctx extends CoreContext = CoreContext> {
   begin?: boolean;
   /** Loader background, e.g. the portal light color when arriving from the hub. */
   loaderColor?: string;
-  /** Hub URL for the back button (default '/'; null hides it). */
+  /** Hub URL for the back button (default: the hub, see `hubUrl`; null hides it). */
   home?: string | null;
   quality?: QualityTier;
   /** Show the touch joystick and buttons on touch devices (default true; the hub turns it off). */

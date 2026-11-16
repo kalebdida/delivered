@@ -1,6 +1,6 @@
 # DELIVERED on Netlify: one static site assembled by `pnpm build`.
 [build]
-  command = "pnpm build"
+  command = "SITE_BASE=/ pnpm build"
   publish = "dist"
 
 [build.environment]

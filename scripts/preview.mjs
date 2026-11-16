@@ -3,6 +3,7 @@ import { createReadStream, existsSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { SITE_BASE } from './site-base.mjs';
 
 const dist = fileURLToPath(new URL('../dist', import.meta.url));
 const port = Number(process.argv[2] ?? process.env.PORT ?? 4173);
@@ -12,7 +13,14 @@ const TYPES = {
   '.wasm': 'application/wasm', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json', '.txt': 'text/plain',
 };
 createServer((req, res) => {
-  const path = normalize(decodeURIComponent(new URL(req.url, 'http://x').pathname)).replace(/^(\.\.[/\\])+/, '');
+  const url = new URL(req.url, 'http://x');
+  // The site lives under SITE_BASE (e.g. /delivered/), the way GitHub Pages serves it.
+  if (SITE_BASE !== '/' && (url.pathname === '/' || url.pathname === SITE_BASE.slice(0, -1))) {
+    res.writeHead(302, { location: SITE_BASE + url.search }).end();
+    return;
+  }
+  const local = url.pathname.startsWith(SITE_BASE) ? '/' + url.pathname.slice(SITE_BASE.length) : url.pathname;
+  const path = normalize(decodeURIComponent(local)).replace(/^(\.\.[/\\])+/, '');
   let file = join(dist, path);
   if (existsSync(file) && statSync(file).isDirectory()) file = join(file, 'index.html');
   let status = 200;
@@ -29,4 +37,4 @@ createServer((req, res) => {
     'cache-control': /\/assets\//.test(file) ? 'public, max-age=31536000, immutable' : 'no-cache',
   });
   createReadStream(file).pipe(res);
-}).listen(port, () => console.log(`DELIVERED preview on http://localhost:${port}`));
+}).listen(port, () => console.log(`DELIVERED preview on http://localhost:${port}${SITE_BASE}`));

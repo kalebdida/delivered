@@ -72,7 +72,7 @@ function draw(now: number): void {
 }
 requestAnimationFrame(draw);
 
-const home = button({ label: t('hub.404.home'), variant: 'text', icon: 'back', href: '/' });
+const home = button({ label: t('hub.404.home'), variant: 'text', icon: 'back', href: import.meta.env.BASE_URL });
 home.classList.add('dl-rise');
 home.style.setProperty('--i', '8');
 const ui = h(

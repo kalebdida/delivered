@@ -118,7 +118,8 @@ export class Lean extends UChapter {
     w.camDistance = OPEN.distance;
     w.lookLift = OPEN.lift;
     w.lookSide = OPEN.side;
-    w.yaw = 0;
+    // Portrait is narrow: turn toward the sun so it stays in the frame.
+    w.yaw = innerWidth / Math.max(1, innerHeight) < 0.8 ? -0.16 : 0;
     this.settle = -1;
     w.visitor.fallPose = 0;
     w.visitor.lean = 0;

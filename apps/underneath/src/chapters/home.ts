@@ -94,6 +94,7 @@ export class Underneath extends UChapter {
       w.sky.wispScale = 1;
       w.arms.uniforms.uLevel.value = 1;
       w.arms.uniforms.uGlow.value = 0;
+      w.arms.uniforms.uGlowSize.value = 12;
       this.ghost?.geometry.dispose();
       (this.ghost?.material as ShaderMaterial | undefined)?.dispose();
       this.beam?.geometry.dispose();
@@ -186,9 +187,11 @@ export class Underneath extends UChapter {
     const arms = w.arms.uniforms;
     arms.uRise.value = smoothstep(0, 6, t);
     arms.uClose.value = smoothstep(3, 9, t);
-    arms.uGlow.value = smoothstep(2, 8, t) * (1 - smoothstep(20, 28, t) * 0.5);
+    arms.uGlow.value = smoothstep(2, 8, t) * (1 - smoothstep(20, 28, t) * 0.5) * (1 - smoothstep(11, 16, t) * 0.55);
     w.sky.fogScale = 1 - smoothstep(0, 4, t) * 0.8;
     if (t < 17) w.sky.wispScale = 1 - smoothstep(1, 6, t);
+    // Once the fog has parted the look is Underneath's, wherever the wide camera stands.
+    if (t < 17) w.sky.lookAltitude = t > 2.5 ? 120 : null;
 
     // Camera: from the fall view (the arms seen from above, rising out of the mist) out to a wide
     // three-quarter view where both arms read in one glance, then a slow push in on the closing hands.
@@ -201,13 +204,15 @@ export class Underneath extends UChapter {
       // The push in: from the whole form down into the palm, where the hands become a landscape.
       const closeK = smoothstep(10.8, 16.4, t);
       const e = closeK * closeK * (3 - 2 * closeK);
-      const az = 0.04 + t * 0.008 + e * 0.75;
       // Portrait screens are narrow: stand further back so both arms still fit.
       const fit = innerWidth / Math.max(1, innerHeight) < 0.8 ? 1.75 : 1;
+      const az = (0.04 + t * 0.008) / fit + e * 0.75;
       const R = 236 * fit * Math.pow(16 / (236 * fit), e);
       const H = 118 * fit * Math.pow(6 / (118 * fit), e);
       const shot = new Vector3(cr.x + Math.sin(az) * R, cr.y + H, cr.z + Math.cos(az) * R);
       const shotLook = new Vector3(cr.x, cr.y + 6 * (1 - e) + 0.6 * e, cr.z - 92 * (1 - e) - 6 * (1 - e));
+      // The focal glow shrinks as the camera comes close, so the palm never washes out.
+      w.arms.uniforms.uGlowSize.value = 12 * (1 - e * 0.8);
       w.freePos.copy(from.lerp(shot, wideK));
       w.freeLook.copy(fromLook.lerp(shotLook, wideK));
     } else {
@@ -220,8 +225,8 @@ export class Underneath extends UChapter {
       const far = new Vector3(2100, 1350, 2100);
       const k15 = smoothstep(10.8, 16.4, 17);
       const e15 = k15 * k15 * (3 - 2 * k15);
-      const az = 0.04 + 17 * 0.008 + e15 * 0.75;
       const fit = innerWidth / Math.max(1, innerHeight) < 0.8 ? 1.75 : 1;
+      const az = (0.04 + 17 * 0.008) / fit + e15 * 0.75;
       const R = 236 * fit * Math.pow(16 / (236 * fit), e15);
       const near = new Vector3(cr.x + Math.sin(az) * R, cr.y + 118 * fit * Math.pow(6 / (118 * fit), e15), cr.z + Math.cos(az) * R);
       w.freePos.copy(near.lerp(far, re));

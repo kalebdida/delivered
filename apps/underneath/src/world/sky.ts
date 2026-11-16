@@ -109,7 +109,7 @@ class Wisps {
           vec3 col = mix(uShade, uColor, clamp(0.55 + p.y * 0.35 + n * 0.4, 0.0, 1.0));
           // Lightning inside the cloud: the thick middle lights up first, the billows show.
           float fl = uFlash * exp(-distance(vC, uFlashPos) / 180.0);
-          col += uFlashCol * fl * (0.25 + 0.75 * smoothstep(0.9, 0.1, d)) * (0.7 + 0.6 * n) * 3.2;
+          col += uFlashCol * fl * (0.25 + 0.75 * smoothstep(0.9, 0.1, d)) * (0.7 + 0.6 * n) * 2.3;
           gl_FragColor = vec4(col + dither(gl_FragCoord.xy), a * 0.75);
         }`,
     });
@@ -286,7 +286,7 @@ class Lightning {
     const flicker = this.level > 0 ? 0.78 + 0.22 * Math.sin(performance.now() * 0.06) : 0;
     this.flash = this.level * flicker;
     this.bolt = Math.max(0, 1 - this.since / 0.35) * (this.level > 0 ? 1 : 0) * flicker;
-    this.uniforms.uI.value = this.flash * 1.5;
+    this.uniforms.uI.value = this.flash * 1.1;
   }
   dispose(): void {
     this.mesh.geometry.dispose();

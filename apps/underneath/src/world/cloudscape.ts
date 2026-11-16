@@ -130,7 +130,7 @@ vec4 storm(vec3 d){
   float cosA = dot(d, uFlashDir);
   float ang = acos(clamp(cosA, -1.0, 1.0));
   float inner = exp(-ang * 3.6) * (0.45 + 0.75 * ridge) * (0.5 + 0.5 * smoothstep(-0.3, 0.6, n));
-  col += uFlashCol * inner * uFlash * 3.4;
+  col += uFlashCol * inner * uFlash * 2.5;
   // The bolt itself, half hidden in the cloud.
   if (uBolt > 0.001) {
     vec3 up = vec3(0.0, 1.0, 0.0);

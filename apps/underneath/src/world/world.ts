@@ -132,7 +132,7 @@ export class World {
       this.yaw -= input.filtered.lookX * dt * 2.2;
       const d = (tall ? 8.6 : 6.8) * this.camDistance;
       this.camGoal.set(Math.sin(this.yaw) * d, (tall ? 3.6 : 2.7) * this.camDistance, Math.cos(this.yaw) * d);
-      const side = this.lookSide * (tall ? 0.35 : 1);
+      const side = this.lookSide * (tall ? 0.6 : 1);
       this.lookGoal.set(-Math.sin(this.yaw) * 2.5 + Math.cos(this.yaw) * side, 1.3 + this.lookLift, -Math.cos(this.yaw) * 2.5 - Math.sin(this.yaw) * side);
     } else {
       this.lookUp = damp(this.lookUp, this.lookingUp ? 1 : 0, 3.2, dt);

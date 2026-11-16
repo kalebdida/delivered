@@ -138,7 +138,9 @@ export class Playground extends UChapter {
     w.camMode = 'ground';
     w.camDistance = 1.35;
     w.lookLift = 1.6;
-    w.lookSide = 1.2;
+    // Portrait is narrow: lean the frame toward the swing instead of past it.
+    const tall = innerWidth / Math.max(1, innerHeight) < 0.8;
+    w.lookSide = tall ? -1.6 : 1.2;
     w.yaw = Math.PI - 0.15;
     w.visitor.fallPose = 0;
     w.visitor.lean = 0;

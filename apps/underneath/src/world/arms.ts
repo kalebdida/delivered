@@ -506,6 +506,8 @@ export class Arms {
           float d = length(cameraPosition - vW) / uScale;
           float haze = 1.0 - exp(-max(0.0, d - 0.12) * 1.15);
           haze = max(haze, smoothstep(0.0, -0.15, vObj.y));
+          // Seen from far up the column (the reveal, where uLevel is raised) the form must still read.
+          haze *= clamp(1.6 - uLevel * 0.45, 0.25, 1.0);
           col = mix(col, uHaze * 0.9, clamp(haze, 0.0, 0.96));
           // Below the mist floor the form dissolves completely.
           float root = smoothstep(-0.26, -0.1, vObj.y);

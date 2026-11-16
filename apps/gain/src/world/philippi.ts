@@ -1,8 +1,8 @@
 // Philippi: the small house where the letter arrives (CH3, night) and the church's courtyard in
-// the morning (CH5). People are simple seated figures (robe, hood, no faces); each can be dim or
-// lit warmly. The courtyard has a garden at its centre that grows as people light up.
+// the morning (CH5). People are seated figures in soft draped silhouettes (robe, mantle over the
+// head, arms resting on the knees, no faces); each can be dim or lit warmly. The courtyard has a garden at its centre that grows as people light up.
 import {
-  BoxGeometry,
+  CapsuleGeometry,
   Color,
   ConeGeometry,
   CylinderGeometry,
@@ -18,11 +18,13 @@ import {
   PlaneGeometry,
   PointLight,
   SphereGeometry,
+  TorusGeometry,
   Vector2,
   Vector3,
   type Material,
 } from 'three';
-import { Sky, seededRandom } from '@delivered/core';
+import { Dust, Sky, seededRandom } from '@delivered/core';
+import { buildHouse, cypressGeometry, oliveTree, tileTexture } from './shapes';
 import { flagstones, masonry } from './textures';
 
 const SKIN = ['#6a4a36', '#8a6448', '#4e3626', '#a07a5a'];
@@ -45,24 +47,57 @@ export class Person {
     const skin = new MeshStandardMaterial({ color: SKIN[Math.floor(rng() * SKIN.length)]!, roughness: 0.7 });
     const cover = new MeshStandardMaterial({ color: rng() < 0.5 ? '#d8cbb0' : ROBES[Math.floor(rng() * ROBES.length)]!, roughness: 0.95 });
     this.mats.push(robe, skin, cover);
+    for (const m of this.mats) {
+      m.onBeforeCompile = (shader) => {
+        shader.fragmentShader = shader.fragmentShader.replace(
+          '#include <emissivemap_fragment>',
+          `#include <emissivemap_fragment>
+          totalEmissiveRadiance *= 0.15 + pow(1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0), 2.0) * 1.6;`,
+        );
+      };
+      m.customProgramCacheKey = () => 'gain-person';
+    }
     this.base = this.mats.map((m) => m.color.clone());
     const h = seated ? 0.62 : 1.0;
-    const body = new Mesh(new LatheGeometry([[0, 0], [0.26, 0], [0.24, h * 0.4], [0.19, h * 0.85], [0.12, h], [0, h + 0.02]].map(([x, y]) => new Vector2(x, y)), 14), robe);
-    const head = new Mesh(new SphereGeometry(0.1, 12, 10), skin);
+    const L = (pts: number[][], seg = 16, a0 = 0, al = Math.PI * 2) => new LatheGeometry(pts.map(([x, y]) => new Vector2(x!, y!)), seg, a0, al);
+    // Body: hips spreading on the ground (seated) or a long robe, a waist, a chest, sloping shoulders.
+    const body = new Mesh(
+      L(seated ? [[0, 0], [0.27, 0], [0.29, 0.06], [0.24, h * 0.42], [0.2, h * 0.7], [0.2, h * 0.86], [0.15, h * 0.97], [0.06, h + 0.03], [0, h + 0.04]] : [[0, 0], [0.24, 0], [0.22, h * 0.4], [0.19, h * 0.7], [0.2, h * 0.86], [0.15, h * 0.97], [0.06, h + 0.03], [0, h + 0.04]]),
+      robe,
+    );
+    const head = new Mesh(new SphereGeometry(0.1, 14, 12), skin);
     head.position.y = h + 0.13;
     head.scale.set(0.95, 1.1, 1);
-    const veil = new Mesh(new SphereGeometry(0.118, 12, 10, Math.PI * 0.65, Math.PI * 1.7, 0, Math.PI * 0.75), cover);
-    veil.position.copy(head.position).add(new Vector3(0, 0.01, -0.01));
-    // The face is never drawn: turn the opening of the head-covering away from the camera's usual view.
-    const shawl = new Mesh(new ConeGeometry(0.2, 0.22, 14, 1, true), cover);
-    shawl.position.y = h - 0.02;
-    this.group.add(body, head, veil, shawl);
+    // The mantle: one cloth over the head that falls over the shoulders and down the back. Its
+    // opening (where a face would be) faces +z, and is kept in shadow.
+    const mantle = new Mesh(
+      L([[0.0, h + 0.27], [0.08, h + 0.25], [0.125, h + 0.18], [0.135, h + 0.08], [0.17, h - 0.02], [0.23, h - 0.1], [0.27, h - 0.3], [0.3, h * 0.35]], 18, Math.PI * 0.18, Math.PI * 1.64),
+      cover,
+    );
+    mantle.rotation.y = Math.PI;
+    (mantle.material as MeshStandardMaterial).side = 2;
+    this.group.add(body, head, mantle);
     if (seated) {
       for (const s of [-1, 1]) {
-        const knee = new Mesh(new SphereGeometry(0.1, 10, 8), robe);
-        knee.position.set(s * 0.1, 0.12, 0.25);
-        knee.scale.set(1, 0.8, 1.6);
-        this.group.add(knee);
+        // Knees, and forearms resting on them with the hands together.
+        const knee = new Mesh(new SphereGeometry(0.1, 12, 10), robe);
+        knee.position.set(s * 0.11, 0.13, 0.24);
+        knee.scale.set(1, 0.85, 1.7);
+        const arm = new Mesh(new CapsuleGeometry(0.045, 0.24, 3, 8), robe);
+        arm.position.set(s * 0.13, h * 0.55, 0.16);
+        arm.rotation.set(1.05, 0, s * 0.35);
+        this.group.add(knee, arm);
+      }
+      const hands = new Mesh(new SphereGeometry(0.05, 10, 8), skin);
+      hands.position.set(0, h * 0.42, 0.3);
+      hands.scale.set(1.4, 0.8, 1);
+      this.group.add(hands);
+    } else {
+      for (const s of [-1, 1]) {
+        const arm = new Mesh(new CapsuleGeometry(0.045, 0.42, 3, 8), robe);
+        arm.position.set(s * 0.21, h * 0.62, 0.03);
+        arm.rotation.z = s * 0.08;
+        this.group.add(arm);
       }
     }
     this.group.traverse((o) => ((o as Mesh).castShadow = true));
@@ -78,10 +113,11 @@ export class Person {
   private apply(): void {
     const dim = new Color('#5a6070');
     this.mats.forEach((m, i) => {
-      // Dim: cool and desaturated. Lit: their own colours, warmed, glowing a little from within.
+      // Dim: cool and desaturated. Lit: their own colours, warmed, with a warm rim along the
+      // silhouette (the light is around them, not painted on).
       m.color.copy(this.base[i]!).lerp(dim, 0.55 * (1 - this.lit));
       m.emissive.set('#ff9a3c');
-      m.emissiveIntensity = this.lit * 0.22;
+      m.emissiveIntensity = this.lit * 0.5;
     });
     if (this.glow) this.glow.intensity = this.lit * 2.2;
   }
@@ -103,6 +139,8 @@ export class House {
   readonly sky: Sky;
   private glassMat: MeshStandardMaterial;
   private doorLight: MeshStandardMaterial;
+  private dust: Dust;
+  private spill: PointLight;
   /** 0..1 the gold light filling the house. */
   fill = 0;
 
@@ -112,36 +150,48 @@ export class House {
     this.sky.setSun(34, 2.6);
     this.group.add(this.sky.mesh);
     const wall = masonry(512, 'philippi-house', '#a89880');
-    const plaster = new MeshStandardMaterial({ map: wall.map, normalMap: wall.normalMap, color: '#c8b8a0', roughness: 1 });
+    // Lime plaster over the stone: the courses show only faintly, as relief.
+    const plaster = new MeshStandardMaterial({ normalMap: wall.normalMap, color: '#a89a86', roughness: 1 });
+    plaster.normalScale.set(0.25, 0.25);
     const ground = flagstones(512, 'philippi-ground', '#7a7064');
-    for (const t of [ground.map, ground.normalMap]) t.repeat.set(10, 10);
+    for (const t of [ground.map, ground.normalMap]) t.repeat.set(30, 30);
     const floor = new Mesh(new PlaneGeometry(60, 60).rotateX(-Math.PI / 2), new MeshStandardMaterial({ map: ground.map, normalMap: ground.normalMap, color: '#8a7f72', roughness: 1 }));
     this.group.add(floor);
-    // Walls (front wall with a door and a window), roof.
+    // Walls (front wall with an arched door and a window), a tiled gable roof.
     const W = 4.4;
     const D = 4;
     const H = 2.8;
-    const piece = (w: number, h: number, d: number, x: number, y: number, z: number) => {
-      const m = new Mesh(new BoxGeometry(w, h, d), plaster);
-      m.position.set(x, y, z);
-      m.castShadow = m.receiveShadow = true;
-      this.group.add(m);
-    };
-    piece(W, H, 0.25, 0, H / 2, -D / 2);
-    piece(0.25, H, D, -W / 2, H / 2, 0);
-    piece(0.25, H, D, W / 2, H / 2, 0);
-    // Front: door gap at x -0.9..-0.1, window gap at x 0.6..1.2, y 1.25..1.75.
-    piece(1.3, H, 0.25, -1.55, H / 2, D / 2);
-    piece(0.7, H, 0.25, 0.25, H / 2, D / 2);
-    piece(0.8, H, 0.25, 1.8, H / 2, D / 2);
-    piece(0.6, 1.25, 0.25, 0.9, 0.625, D / 2);
-    piece(0.6, H - 1.75, 0.25, 0.9, 1.75 + (H - 1.75) / 2, D / 2);
-    piece(0.8, H - 2.05, 0.25, -0.5, 2.05 + (H - 2.05) / 2, D / 2);
-    const roof = new Mesh(new ConeGeometry(3.6, 1.4, 4), new MeshStandardMaterial({ color: '#6a3a28', roughness: 0.9 }));
-    roof.rotation.y = Math.PI / 4;
-    roof.scale.set(1, 1, 0.82);
-    roof.position.y = H + 0.65;
-    this.group.add(roof);
+    const tiles = tileTexture('philippi-tiles');
+    tiles.repeat.set(0.5, 0.5);
+    const house = buildHouse({
+      w: W,
+      d: D,
+      h: H,
+      plaster,
+      roof: new MeshStandardMaterial({ map: tiles, color: '#c09080', roughness: 0.85 }),
+      door: { x: -0.5, w: 0.8 },
+      windows: [{ x: 0.9, y: 1.5, w: 0.6, h: 0.5 }],
+      pitch: 1.2,
+    });
+    this.group.add(house);
+    // Around it: an olive tree, cypresses against the sky, a low garden wall in the foreground.
+    const olive = oliveTree('philippi-olive', 0.9);
+    olive.position.set(-4.2, 0, 1.2);
+    this.group.add(olive);
+    const cypMat = new MeshStandardMaterial({ color: '#1f2c26', roughness: 1 });
+    for (const [x, z, sc] of [[4.4, -2.5, 1.0], [5.6, -4.5, 1.25], [-6.5, -6, 1.1], [9, -12, 1.4]] as const) {
+      const c = new Mesh(cypressGeometry(), cypMat);
+      c.position.set(x, 0, z);
+      c.scale.setScalar(sc);
+      this.group.add(c);
+    }
+    const low = new Mesh(new CapsuleGeometry(0.22, 4.2, 4, 10).rotateZ(Math.PI / 2), new MeshStandardMaterial({ map: wall.map, normalMap: wall.normalMap, color: '#8a7e70', roughness: 1 }));
+    low.position.set(-1.6, 0.2, 5.6);
+    low.scale.set(1, 1.2, 1.3);
+    this.group.add(low);
+    this.dust = new Dust({ count: 120, bounds: [4, 2, 4], color: '#ffd9a0', size: 1.6, speed: 0.25, opacity: 0.35, seed: 'philippi-dust' });
+    this.dust.points.position.set(0.5, 1.6, 3.5);
+    this.group.add(this.dust.points);
     this.glassMat = new MeshStandardMaterial({ color: '#000000', emissive: new Color('#ffb25c'), emissiveIntensity: 0.6, transparent: true, opacity: 0.0 });
     this.doorLight = new MeshStandardMaterial({ color: '#000000', emissive: new Color('#ffb25c'), emissiveIntensity: 0.4 });
     const doorGlow = new Mesh(new PlaneGeometry(0.8, 2.05), this.doorLight);
@@ -163,13 +213,21 @@ export class House {
       this.people.push(p);
       this.group.add(p.group);
     }
-    const moon = new DirectionalLight('#9fb3dd', 0.8);
+    // Key: the moon from the front left. Rim: cool from behind, outlining the roof, the trees and
+    // the wall against the sky. The warm light is the house itself (door, window, spill).
+    const moon = new DirectionalLight('#a8bce4', 1.3);
     moon.position.set(-8, 12, 10);
-    this.group.add(moon, new HemisphereLight('#26324e', '#0d0b0a', 0.5));
+    const rim = new DirectionalLight('#7f98d6', 1.6);
+    rim.position.set(6, 7, -12);
+    this.spill = new PointLight('#ffb25c', 1.5, 7, 1.6);
+    this.spill.position.set(-0.3, 1.4, 3);
+    this.group.add(moon, rim, this.spill, new HemisphereLight('#2c3a5c', '#0d0b0a', 0.7));
   }
 
   update(dt: number): void {
     this.sky.update(dt);
+    this.dust.update(dt);
+    this.spill.intensity = 1.5 + this.fill * 9;
     this.inside.intensity = 4 + this.fill * 26;
     this.inside.color.set('#ffb25c').lerp(new Color('#ffe9b0'), this.fill);
     this.doorLight.emissiveIntensity = 0.4 + this.fill * 3.2;
@@ -181,6 +239,7 @@ export class House {
   }
 
   dispose(): void {
+    this.dust.dispose();
     disposeTree(this.group);
     this.sky.dispose();
   }
@@ -203,6 +262,7 @@ export class Courtyard {
   growth = 0;
   private growthNow = 0;
   private sunTarget = 1;
+  private pollen: Dust;
 
   constructor(opts: { maxInstances: number; shadows: boolean; shadowMapSize: number }) {
     const rng = seededRandom('courtyard');
@@ -210,46 +270,48 @@ export class Courtyard {
     this.sky.setTime(9.2);
     this.sky.set({ zenith: '#6f97c9', horizon: '#f2d6aa', ground: '#b49c7e', sun: '#fff1d6', sunIntensity: 3.2, sunGlow: 0.6, stars: 0 });
     this.group.add(this.sky.mesh);
-    const ground = flagstones(512, 'courtyard', '#b9aa92', 0.72);
-    for (const t of [ground.map, ground.normalMap, ground.roughnessMap]) t.repeat.set(16, 16);
+    const ground = flagstones(512, 'courtyard', '#b9aa92', 0.86);
+    for (const t of [ground.map, ground.normalMap, ground.roughnessMap]) t.repeat.set(26, 26);
     const floor = new Mesh(new PlaneGeometry(40, 40).rotateX(-Math.PI / 2), new MeshStandardMaterial({ map: ground.map, normalMap: ground.normalMap, roughnessMap: ground.roughnessMap, color: '#ffffff', roughness: 1 }));
     floor.receiveShadow = true;
     this.group.add(floor);
-    // Low houses around the courtyard, plastered and warm in the morning.
+    // Low houses around the courtyard, plastered and warm in the morning: bevelled walls, arched
+    // doors, small windows, tiled gable roofs, all facing the garden.
     const wall = masonry(512, 'courtyard-wall', '#d9c9ae');
-    const plaster = new MeshStandardMaterial({ map: wall.map, normalMap: wall.normalMap, color: '#ffffff', roughness: 1 });
-    plaster.normalScale.set(0.45, 0.45);
+    // Lime plaster over stone: the courses show only faintly through, as relief.
+    const plaster = new MeshStandardMaterial({ normalMap: wall.normalMap, color: '#e6d8bf', roughness: 1 });
+    plaster.normalScale.set(0.22, 0.22);
+    const tiles = tileTexture('courtyard-tiles');
+    tiles.repeat.set(0.45, 0.45);
+    const roofMat = new MeshStandardMaterial({ map: tiles, color: '#ffffff', roughness: 0.85 });
     for (let i = 0; i < 14; i++) {
       const a = (i / 14) * Math.PI * 2;
       const r = 15.5 + rng() * 2;
       const w = 4 + rng() * 3;
-      const h = 3 + rng() * 2.5;
-      const m = new Mesh(new BoxGeometry(w, h, 3.5), plaster);
-      m.position.set(Math.cos(a) * r, h / 2, Math.sin(a) * r);
-      m.lookAt(0, h / 2, 0);
-      m.castShadow = m.receiveShadow = true;
-      this.group.add(m);
-      const roof = new Mesh(new ConeGeometry(Math.max(w, 3.5) * 0.75, 1.1, 4), new MeshStandardMaterial({ color: '#9a5a3a', roughness: 0.9 }));
-      roof.position.set(m.position.x, h + 0.5, m.position.z);
-      roof.rotation.y = Math.PI / 4 + a;
-      roof.scale.set(1, 1, 0.7);
-      this.group.add(roof);
+      const h = 3 + rng() * 2.2;
+      const doorX = (rng() - 0.5) * (w - 2);
+      const windows = [];
+      for (const side of [-1, 1]) {
+        const x = doorX + side * (1 + rng() * 0.6);
+        if (Math.abs(x) < w / 2 - 0.5 && rng() < 0.75) windows.push({ x, y: 1.7 + rng() * 0.3, w: 0.45, h: 0.55 });
+      }
+      const house = buildHouse({ w, d: 3.6, h, plaster, roof: roofMat, door: { x: doorX, w: 0.95 }, windows, pitch: 1.1 });
+      house.position.set(Math.cos(a) * r, 0, Math.sin(a) * r);
+      house.lookAt(0, 0, 0);
+      this.group.add(house);
     }
     // A low stone ring for the garden at the centre, an olive tree.
-    const ring = new Mesh(new CylinderGeometry(2.2, 2.3, 0.35, 32, 1, true), new MeshStandardMaterial({ color: '#b9a888', roughness: 1, side: 2 }));
-    ring.position.y = 0.175;
+    const ring = new Mesh(new TorusGeometry(2.22, 0.2, 10, 48).rotateX(Math.PI / 2), new MeshStandardMaterial({ normalMap: wall.normalMap, color: '#b8a888', roughness: 1 }));
+    ring.position.y = 0.16;
+    ring.scale.y = 1.4;
+    ring.castShadow = ring.receiveShadow = true;
     this.group.add(ring);
     const soil = new Mesh(new CylinderGeometry(2.15, 2.15, 0.3, 32), new MeshStandardMaterial({ color: '#4a3a2a', roughness: 1 }));
     soil.position.y = 0.15;
     this.group.add(soil);
-    const trunk = new Mesh(new CylinderGeometry(0.12, 0.2, 2.2, 8), new MeshStandardMaterial({ color: '#5a4636', roughness: 1 }));
-    trunk.position.set(0.3, 1.25, -0.2);
-    trunk.rotation.z = 0.15;
-    const crown = new Mesh(new SphereGeometry(1.3, 12, 10), new MeshStandardMaterial({ color: '#5f6e48', roughness: 0.9 }));
-    crown.position.set(0.5, 2.7, -0.2);
-    crown.scale.set(1.2, 0.75, 1.1);
-    this.group.add(trunk, crown);
-    for (const m of [trunk, crown]) m.castShadow = true;
+    const olive = oliveTree('courtyard-olive', 1.05);
+    olive.position.set(0.3, 0.25, -0.2);
+    this.group.add(olive);
 
     // Flowers and vines (instanced), each with its own bloom amount.
     const n = Math.min(900, Math.round(opts.maxInstances * 0.4));
@@ -327,7 +389,13 @@ export class Courtyard {
       c.far = 80;
       this.sun.shadow.bias = -0.0005;
     }
-    this.group.add(this.sun, new HemisphereLight('#c8d8f0', '#9a8466', 1.7));
+    // Rim: a soft warm back light from beyond the garden, so people and roofs separate from the
+    // walls. Atmosphere: morning haze (World.air) and pollen drifting in the sun.
+    const rim = new DirectionalLight('#ffe6c4', 1.5);
+    rim.position.set(-6, 9, -22);
+    this.pollen = new Dust({ count: 260, bounds: [9, 2.2, 9], color: '#fff2d6', size: 2.6, speed: 0.22, opacity: 0.6, seed: 'pollen' });
+    this.pollen.points.position.y = 2;
+    this.group.add(this.sun, rim, this.pollen.points, new HemisphereLight('#c8d8f0', '#9a8466', 1.1));
   }
 
   private writeGarden(): void {
@@ -356,6 +424,7 @@ export class Courtyard {
 
   update(dt: number): void {
     this.sky.update(dt);
+    this.pollen.update(dt);
     for (const p of this.people) p.update(dt);
     const lit = this.people.reduce((a, p) => a + p.lit, 0) / this.people.length;
     this.growth = Math.max(this.growth, lit);
@@ -369,6 +438,7 @@ export class Courtyard {
   }
 
   dispose(): void {
+    this.pollen.dispose();
     disposeTree(this.group);
     this.sky.dispose();
   }

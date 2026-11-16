@@ -6,26 +6,23 @@ import {
   BufferAttribute,
   BufferGeometry,
   CatmullRomCurve3,
+  Color,
   DirectionalLight,
-  ExtrudeGeometry,
   Group,
   HemisphereLight,
   Mesh,
   MeshStandardMaterial,
+  PointLight,
   PlaneGeometry,
   Points,
   ShaderMaterial,
-  Shape,
-  Vector2,
   Vector3,
   type Material,
 } from 'three';
-import { Sky, glsl, seededRandom } from '@delivered/core';
+import { Sky, createNoise, glsl, seededRandom } from '@delivered/core';
 
 export const KM = 0.02;
 
-/** km east, km south of Rome → world (x, z). */
-const P = (x: number, z: number) => new Vector2(x * KM, z * KM);
 
 const ITALY = [
   [-300, -278], [-215, -150], [-120, -70], [-20, 6], [60, 70], [150, 117], [215, 230], [262, 330], [260, 433], [300, 400], [330, 300],
@@ -58,22 +55,67 @@ export const ROUTE = new CatmullRomCurve3([
 ].map((v) => v.multiplyScalar(KM)));
 
 const SEA_FRAG = /* glsl */ `
-uniform float uTime; uniform vec3 uMoonDir; varying vec3 vWorld;
+uniform float uTime; uniform vec3 uMoonDir; uniform vec3 uHorizon; varying vec3 vWorld;
 ${glsl.hash}
 ${glsl.simplex3D}
 ${glsl.dither}
+float waves(vec2 p){ return snoise(vec3(p * 1.4, uTime * 0.08)) * 0.5 + snoise(vec3(p * 4.0, uTime * 0.15)) * 0.25 + snoise(vec3(p * 11.0, uTime * 0.4)) * 0.08; }
 void main(){
   vec2 p = vWorld.xz;
-  float n = snoise(vec3(p * 1.4, uTime * 0.08)) * 0.5 + snoise(vec3(p * 4.0, uTime * 0.15)) * 0.25;
-  vec3 deep = vec3(0.012, 0.025, 0.055);
-  vec3 shallow = vec3(0.03, 0.06, 0.1);
+  float n = waves(p);
+  float e = 0.02;
+  vec3 N = normalize(vec3(-(waves(p + vec2(e, 0.0)) - n) / e * 0.035, 1.0, -(waves(p + vec2(0.0, e)) - n) / e * 0.035));
+  vec3 V = normalize(cameraPosition - vWorld);
+  vec3 deep = vec3(0.014, 0.03, 0.065);
+  vec3 shallow = vec3(0.035, 0.07, 0.12);
   vec3 c = mix(deep, shallow, 0.5 + 0.5 * n);
-  // A road of moonlight on the water, glinting.
-  float glint = pow(max(0.0, snoise(vec3(p * 22.0, uTime * 0.6))), 6.0);
-  float road = exp(-pow((p.x - p.y * 0.4 - 10.0) * 0.18, 2.0));
-  c += vec3(0.75, 0.82, 1.0) * glint * (0.35 + road * 1.8);
+  // The sky in the water toward the horizon (fresnel), so the sea never reads as a flat slab.
+  float fr = pow(1.0 - max(dot(N, V), 0.0), 4.0);
+  c = mix(c, uHorizon, clamp(fr * 0.9, 0.0, 0.85));
+  // The moon's road: a sharp glitter and a broad sheen along the real reflection.
+  vec3 R = reflect(-V, N);
+  float m = max(dot(R, normalize(uMoonDir)), 0.0);
+  float glint = pow(max(0.0, snoise(vec3(p * 22.0, uTime * 0.6))), 4.0);
+  c += vec3(0.78, 0.85, 1.0) * (pow(m, 260.0) * 2.4 + pow(m, 24.0) * 0.18 + glint * pow(m, 6.0) * 0.9);
   gl_FragColor = vec4(c + dither(gl_FragCoord.xy), 1.0);
 }`;
+
+/** All coast polygons (km), each with how high its mountains rise. */
+const LANDS: [readonly (readonly number[])[], number][] = [
+  [ITALY, 0.55],
+  [BALKANS, 0.75],
+  [ANATOLIA, 0.6],
+  [SICILY, 0.4],
+  [CRETE, 0.45],
+];
+
+function inside(px: number, pz: number, poly: readonly (readonly number[])[]): boolean {
+  let c = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, zi] = poly[i]!;
+    const [xj, zj] = poly[j]!;
+    if (zi! > pz !== zj! > pz && px < ((xj! - xi!) * (pz - zi!)) / (zj! - zi!) + xi!) c = !c;
+  }
+  return c;
+}
+
+function edgeDist(px: number, pz: number, poly: readonly (readonly number[])[]): number {
+  let best = Infinity;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [ax, az] = poly[j]!;
+    const [bx, bz] = poly[i]!;
+    const dx = bx! - ax!;
+    const dz = bz! - az!;
+    const t = Math.max(0, Math.min(1, ((px - ax!) * dx + (pz - az!) * dz) / (dx * dx + dz * dz || 1)));
+    best = Math.min(best, Math.hypot(px - ax! - t * dx, pz - az! - t * dz));
+  }
+  return best;
+}
+
+export interface MapOptions {
+  /** Moon elevation (degrees) and azimuth (radians). Default high behind the start of the route. */
+  moon?: [number, number];
+}
 
 export class MapWorld {
   readonly group = new Group();
@@ -82,15 +124,16 @@ export class MapWorld {
   private lightsMat: ShaderMaterial;
   private time = 0;
 
-  constructor() {
+  constructor(opts: MapOptions = {}) {
     const rng = seededRandom('map');
     this.sky = new Sky(800);
     this.sky.set({ zenith: '#03050c', horizon: '#0f1730', ground: '#05060a', sun: '#CFE0FF', stars: 1, sunSize: 0.02, sunGlow: 0.4, sunIntensity: 3 });
-    this.sky.setSun(30, 3.6);
+    const [elev, az] = opts.moon ?? [30, 3.6];
+    this.sky.setSun(elev, az);
     this.group.add(this.sky.mesh);
 
     this.seaMat = new ShaderMaterial({
-      uniforms: { uTime: { value: 0 }, uMoonDir: { value: new Vector3(-0.3, 0.6, -0.7) } },
+      uniforms: { uTime: { value: 0 }, uMoonDir: { value: this.sky.sunDirection.clone() }, uHorizon: { value: new Color('#1d2a4e') } },
       vertexShader: 'varying vec3 vWorld; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vWorld = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }',
       fragmentShader: SEA_FRAG,
     });
@@ -98,31 +141,59 @@ export class MapWorld {
     sea.position.set(14, -0.02, 4);
     this.group.add(sea);
 
-    const land = new MeshStandardMaterial({ color: '#5a5c66', roughness: 0.95, emissive: '#151a28', emissiveIntensity: 1 });
-    const rim = new MeshStandardMaterial({ color: '#66666e', roughness: 0.95, emissive: '#151a28', emissiveIntensity: 1 });
-    const addLand = (pts: readonly (readonly number[])[], height: number, mat: MeshStandardMaterial) => {
-      const shape = new Shape(pts.map(([x, z]) => P(x!, z!)));
-      const g = new ExtrudeGeometry(shape, { depth: height, bevelEnabled: true, bevelThickness: height * 0.6, bevelSize: 0.08, bevelSegments: 2, curveSegments: 4 });
-      g.rotateX(Math.PI / 2);
-      g.computeVertexNormals();
-      const m = new Mesh(g, mat);
-      m.position.y = height;
-      this.group.add(m);
-    };
-    addLand(ITALY, 0.12, land);
-    addLand(BALKANS, 0.14, land);
-    addLand(ANATOLIA, 0.12, land);
-    addLand(SICILY, 0.08, rim);
-    addLand(CRETE, 0.08, rim);
-    for (const [[x, z], r] of ISLANDS) {
+    // The land: one heightfield with soft coasts and moonlit ridges (mountains rise away from the
+    // shore), coloured by height: pale shingle at the water, dark scrub, grey stone on the ridges.
+    const noise = createNoise('map-land');
+    const isles = ISLANDS.map(([[x, z], r]) => {
       const pts: number[][] = [];
       for (let k = 0; k < 7; k++) {
         const a = (k / 7) * Math.PI * 2;
         const rr = r * (0.7 + rng() * 0.6);
         pts.push([x + Math.cos(a) * rr, z + Math.sin(a) * rr]);
       }
-      addLand(pts, 0.04, rim);
+      return [pts, 0.18] as [number[][], number];
+    });
+    const lands = [...LANDS, ...isles];
+    const X0 = -9, X1 = 35, Z0 = -15, Z1 = 19;
+    const NX = 240, NZ = 186;
+    const geo = new PlaneGeometry(X1 - X0, Z1 - Z0, NX, NZ).rotateX(-Math.PI / 2);
+    geo.translate((X0 + X1) / 2, 0, (Z0 + Z1) / 2);
+    const pos = geo.attributes.position!;
+    const col = new Float32Array(pos.count * 3);
+    const shore = new Color('#8a8578');
+    const scrub = new Color('#3c4436');
+    const stone = new Color('#6e6c70');
+    const tmp = new Color();
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i);
+      const z = pos.getZ(i);
+      const kx = x / KM;
+      const kz = z / KM;
+      let land = -1;
+      let dist = Infinity;
+      for (const [poly, peak] of lands) {
+        const d = edgeDist(kx, kz, poly) * KM;
+        if (inside(kx, kz, poly)) land = Math.max(land, peak);
+        dist = Math.min(dist, d);
+      }
+      let y: number;
+      if (land > 0) {
+        const ridge = 1 - Math.abs(noise.fbm2(x * 0.17, z * 0.17, 3));
+        const up = Math.min(1, dist / 1.4);
+        y = 0.03 + Math.min(1, dist / 0.25) * 0.05 + ridge * ridge * ridge * land * 0.9 * up;
+        const hk = Math.min(1, y / (land * 0.7 + 0.01));
+        tmp.copy(shore).lerp(scrub, Math.min(1, dist / 0.18)).lerp(stone, Math.max(0, hk - 0.35) * 1.4);
+      } else {
+        y = -0.04 - Math.min(1, dist / 0.6) * 0.2;
+        tmp.copy(shore).multiplyScalar(0.6);
+      }
+      pos.setY(i, y);
+      col.set([tmp.r, tmp.g, tmp.b], i * 3);
     }
+    geo.setAttribute('color', new BufferAttribute(col, 3));
+    geo.computeVertexNormals();
+    const terrain = new Mesh(geo, new MeshStandardMaterial({ vertexColors: true, roughness: 0.95, emissive: '#0c1020', emissiveIntensity: 1 }));
+    this.group.add(terrain);
 
     // City lights: Rome a broad warm cluster, Philippi small; scattered villages along the road.
     const lights: number[] = [];
@@ -131,7 +202,7 @@ export class MapWorld {
       for (let i = 0; i < n; i++) {
         const r = Math.pow(rng(), 0.6) * spread;
         const a = rng() * Math.PI * 2;
-        lights.push((cx + Math.cos(a) * r) * KM, 0.32, (cz + Math.sin(a) * r) * KM);
+        lights.push((cx + Math.cos(a) * r) * KM, 0.14, (cz + Math.sin(a) * r) * KM);
         sizes.push(size * (0.5 + rng()));
       }
     };
@@ -139,7 +210,7 @@ export class MapWorld {
     cluster(990, 100, 60, 8, 3);
     for (let i = 0; i < 70; i++) {
       const p = ROUTE.getPoint(rng());
-      lights.push(p.x + (rng() - 0.5) * 1.2, 0.3, p.z + (rng() - 0.5) * 1.2);
+      lights.push(p.x + (rng() - 0.5) * 1.2, 0.16, p.z + (rng() - 0.5) * 1.2);
       sizes.push(1.5 + rng() * 1.5);
     }
     const g = new BufferGeometry();
@@ -161,9 +232,13 @@ export class MapWorld {
     pts.frustumCulled = false;
     this.group.add(pts);
 
-    const moon = new DirectionalLight('#9fb3dd', 2.2);
-    moon.position.set(-20, 30, -20);
-    this.group.add(moon, new HemisphereLight('#25324f', '#0b0a0a', 0.6));
+    // Key: the moon, from where it hangs in the sky. Rim: a cool light from the opposite side that
+    // picks out the ridges. Fill: the night sky.
+    const moon = new DirectionalLight('#b0c2ea', 3.2);
+    moon.position.copy(this.sky.sunDirection).multiplyScalar(40);
+    const rim = new DirectionalLight('#6f84bd', 1.2);
+    rim.position.set(-this.sky.sunDirection.x * 40, 20, -this.sky.sunDirection.z * 40);
+    this.group.add(moon, rim, new HemisphereLight('#2c3a60', '#0b0a0a', 0.9));
   }
 
   update(dt: number): void {
@@ -191,6 +266,12 @@ export class Streak {
   private trail: Points;
   private trailPos: Float32Array;
   private readonly n = 90;
+  private glow: PointLight;
+
+  /** Warm light the letter casts on what is under it (0 = none). */
+  set light(v: number) {
+    this.glow.intensity = v;
+  }
 
   constructor(size = 0.08) {
     const mat = new ShaderMaterial({
@@ -221,7 +302,8 @@ export class Streak {
       }),
     );
     this.trail.frustumCulled = false;
-    this.group.add(this.head, this.trail);
+    this.glow = new PointLight('#ffc77a', 0, size * 60, 1.6);
+    this.group.add(this.head, this.trail, this.glow);
   }
 
   /** Move the head; the trail follows. */
@@ -231,6 +313,7 @@ export class Streak {
     this.trailPos[1] = p.y;
     this.trailPos[2] = p.z;
     this.head.position.copy(p);
+    this.glow.position.copy(p);
     this.trail.geometry.attributes.position!.needsUpdate = true;
   }
 
@@ -238,6 +321,7 @@ export class Streak {
   reset(p: Vector3): void {
     for (let i = 0; i < this.n; i++) this.trailPos.set([p.x, p.y, p.z], i * 3);
     this.head.position.copy(p);
+    this.glow.position.copy(p);
   }
 
   get position(): Vector3 {

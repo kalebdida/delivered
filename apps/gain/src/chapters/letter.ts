@@ -251,7 +251,7 @@ export class Letter extends GChapter {
       this.streak.moveTo(p);
       // Above and behind, looking down over the roofs.
       ctx.rig.position.lerp(p.clone().add(new Vector3(-9, 9, -12)), 1 - Math.exp(-dt * 2.2));
-      ctx.rig.target.lerp(p.clone().add(new Vector3(6, -6, 8)), 1 - Math.exp(-dt * 4));
+      ctx.rig.target.lerp(p.clone().add(new Vector3(10, -3.2, 13)), 1 - Math.exp(-dt * 4));
       this.rome.update(dt, () => {}, () => {});
       if (this.flag('toSea', t > 5)) ctx.postfx.fadeTo('black', 1, 0.5);
       if (t > 5.6) this.toSea();
@@ -262,8 +262,9 @@ export class Letter extends GChapter {
       this.streak.moveTo(p);
       const ahead = ROUTE.getPointAt(Math.min(1, k + 0.05));
       const back = p.clone().sub(ahead).setY(0).normalize();
-      ctx.rig.position.lerp(p.clone().addScaledVector(back, 4.5).add(new Vector3(0, 3.2 + Math.sin(k * Math.PI) * 3.5, 1.5)), 1 - Math.exp(-dt * 1.4));
-      ctx.rig.target.lerp(p.clone().lerp(PHILIPPI, 0.25), 1 - Math.exp(-dt * 3));
+      ctx.rig.position.lerp(p.clone().addScaledVector(back, 3.2).add(new Vector3(0, 0.9 + Math.sin(k * Math.PI) * 1.2, 0.9)), 1 - Math.exp(-dt * 1.4));
+      const far = ROUTE.getPointAt(Math.min(1, k + 0.2)).lerp(PHILIPPI, 0.2);
+      ctx.rig.target.lerp(far.setY(p.y * 0.62), 1 - Math.exp(-dt * 3));
       this.map.update(dt);
       if (this.flag('land', t > 10.4)) ctx.postfx.fadeTo('black', 1, 0.6);
       if (t > 11.1) this.toPhilippi();
@@ -304,8 +305,9 @@ export class Letter extends GChapter {
     this.streak = new Streak(0.09);
     this.streak.reset(this.rome.origin);
     this.root.add(this.streak.group);
-    this.rome.lightWindows(0.45);
-    ctx.rig.snapTo(this.rome.origin.clone().add(new Vector3(-9, 9, -8)), this.rome.origin.clone().add(new Vector3(6, -4, 10)));
+    this.rome.lightWindows(0.6);
+    ctx.rig.snapTo(this.rome.origin.clone().add(new Vector3(-9, 9, -8)), this.rome.origin.clone().add(new Vector3(10, -3, 13)));
+    this.streak.light = 6;
     ctx.engine.exposure = 1.1;
     ctx.postfx.fadeTo('white', 0, 1.2);
     this.next('rome');
@@ -315,12 +317,14 @@ export class Letter extends GChapter {
     const { ctx } = this;
     this.rome?.dispose();
     this.rome = null;
-    this.map = new MapWorld();
+    // The moon low ahead, east over the Aegean, so its road on the water leads the letter on.
+    this.map = new MapWorld({ moon: [11, 1.42] });
     this.root.add(this.map.group);
-    ctx.world.air('map');
+    ctx.world.air('flight');
+    this.streak!.light = 1.2;
     const start = ROUTE.getPointAt(0);
     this.streak!.reset(start);
-    ctx.rig.snapTo(start.clone().add(new Vector3(-4.5, 3.4, 1.2)), start.clone().add(new Vector3(2, 0, 0.5)));
+    ctx.rig.snapTo(start.clone().add(new Vector3(-3.2, 1.2, 0.9)), start.clone().add(new Vector3(4, -0.8, 0.8)));
     ctx.rig.setFov(55);
     ctx.postfx.fadeTo('black', 0, 1.0);
     this.next('sea');
@@ -333,9 +337,10 @@ export class Letter extends GChapter {
     this.house = new House();
     this.root.add(this.house.group);
     ctx.world.air('night');
+    this.streak!.light = 2;
     const win = this.house.window;
     this.streak!.reset(win.clone().add(new Vector3(3, 6, 8)));
-    ctx.rig.snapTo(new Vector3(2.6, 1.7, 7.6), new Vector3(0.1, 1.4, 1.6));
+    ctx.rig.snapTo(new Vector3(3.2, 2.5, 8), new Vector3(0, 1.7, 1.4));
     ctx.rig.setFov(48);
     ctx.engine.exposure = 1.15;
     ctx.postfx.fadeTo('black', 0, 1.2);

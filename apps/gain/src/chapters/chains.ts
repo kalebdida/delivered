@@ -118,7 +118,9 @@ export class Chains extends GChapter {
     const o = this.rome.origin;
     w.release();
     ctx.rig.snapTo(new Vector3(o.x + 1.5, o.y + 0.6, o.z + 3), new Vector3(o.x, 1.5, o.z + 14));
-    ctx.rig.playPath([new Vector3(o.x + 1.5, o.y + 0.6, o.z + 3), new Vector3(10, 9, -10), new Vector3(16, 16, 14)], { duration: 7, lookAt: new Vector3(0, 0, 0), fov: 50 });
+    // Out of the window and down to a low three-quarter view: the ranks recede toward the cell
+    // block, its gold window the focal point, the moonlit sky and the city above them.
+    ctx.rig.playPath([new Vector3(o.x + 1.5, o.y + 0.6, o.z + 3), new Vector3(9, 6.5, -11), new Vector3(15.5, 4.6, 13)], { duration: 7, lookAt: new Vector3(0, 1.8, -10), fov: 48 });
     ctx.engine.exposure = 1.1;
     this.rome.wave(10);
     this.waves = 1;

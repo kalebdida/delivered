@@ -237,6 +237,13 @@ export class EndCard {
       h('div', { class: 'dl-ref dl-rise', style: '--i:8' }, formatRef(opts.ref, lang)),
       opts.line ? h('p', { class: 'dl-end__line dl-rise', style: '--i:10' }, opts.line) : null,
       actions,
+      // The same quiet line closes every room.
+      h(
+        'p',
+        { class: 'dl-caption dl-end__support dl-rise', style: '--i:14' },
+        `${t('core.support')} `,
+        h('a', { href: 'https://findahelpline.com', target: '_blank', rel: 'noopener noreferrer' }, 'findahelpline.com'),
+      ),
     );
     document.body.appendChild(el);
     this.el = el;

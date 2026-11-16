@@ -425,6 +425,8 @@ export class Arms {
     uWrist: { value: 0.8 },
     uGlow: { value: 0 },
     uGlowSize: { value: 12 },
+    /** 0..1: close work. The inner glow gives way to the key light, so palms and fingers are carved by shadow. */
+    uSculpt: { value: 0 },
     uCradle: { value: new Vector3() },
   };
   readonly core: Mesh;
@@ -468,7 +470,7 @@ export class Arms {
         }`,
       fragmentShader: /* glsl */ `
         uniform vec3 uWarm; uniform vec3 uGold; uniform vec3 uDeep; uniform vec3 uRim; uniform vec3 uHaze; uniform vec3 uKeyDir;
-        uniform float uLevel; uniform float uTime; uniform float uWrist; uniform float uScale; uniform vec3 uCradle; uniform float uGlow;
+        uniform float uLevel; uniform float uTime; uniform float uWrist; uniform float uScale; uniform vec3 uCradle; uniform float uGlow; uniform float uSculpt;
         varying vec3 vW; varying vec3 vN; varying vec3 vObj; varying float vT; varying float vF;
         ${glsl.simplex3D}
         ${glsl.dither}
@@ -487,21 +489,28 @@ export class Arms {
           float marble = 0.5 + 0.5 * snoise(vObj * 9.0 - vec3(0.0, 0.0, uTime * 0.03));
           // Light, not a lit object: the thick middle glows from within, the key light only shapes it,
           // and a fresnel rim draws the silhouette.
-          vec3 body = mix(uDeep, uWarm, clamp(0.35 + wrap * 0.45 + sss * 0.35, 0.0, 1.0));
-          vec3 col = body * (0.34 + 0.5 * wrap + 0.42 * sss) * (0.82 + 0.36 * marble);
+          // Up close (uSculpt) the even inner glow steps back: lit planes stay warm, the valleys between
+          // the fingers and the sides of the palm fall to a deep amber, and the rim draws every edge.
+          vec3 body = mix(uDeep * mix(1.0, 0.42, uSculpt), uWarm, clamp(0.35 + wrap * 0.45 + sss * 0.35 - uSculpt * 0.3 * (1.0 - wrap), 0.0, 1.0));
+          float shape = mix(0.34 + 0.5 * wrap + 0.42 * sss, 0.06 + 1.2 * pow(wrap, 2.4) + 0.08 * sss, uSculpt);
+          vec3 col = body * shape * (0.82 + 0.36 * marble);
+          // Up close the light is a pool around the one they hold; the rest of the palm falls away
+          // into amber shadow, so the frame has one bright place and the eye goes to it.
+          float pd = length(vObj - uCradle);
+          float pool = exp(-pd * 130.0);
+          col *= mix(1.0, 0.07 + 1.3 * pool, uSculpt);
           col += uRim * fres * (0.65 + 0.8 * wrap);
           // Translucency where the key light comes through toward the eye.
           col += uWarm * pow(clamp(dot(-V, uKeyDir) * 0.5 + 0.5, 0.0, 1.0), 6.0) * fres * 0.6;
-          col += uWarm * bands * 0.12 * (0.4 + 0.6 * sss);
+          col += uWarm * bands * (0.12 + 0.22 * uSculpt * (0.2 + pool)) * (0.4 + 0.6 * sss);
           // The hands carry the most light; the roots fall away into the mist.
           col *= mix(0.6, 1.1, smoothstep(0.25, 0.95, vT));
           // Light pooled in the palms around the one they hold: the hottest point of the frame.
-          float pd = length(vObj - uCradle);
-          col += uWarm * (exp(-pd * 22.0) * 0.55 + exp(-pd * 95.0) * 1.6 * uGlow) * (0.5 + 0.5 * sss);
+          col += uWarm * (exp(-pd * 22.0) * 0.55 * (1.0 - 0.7 * uSculpt) + exp(-pd * 95.0) * 1.6 * uGlow) * (0.5 + 0.5 * sss);
           // The gold mark at each wrist.
           float mark = exp(-pow((vT - uWrist) / 0.0065, 2.0)) * (1.0 - vF);
           col = mix(col, uGold * 1.5, mark * 0.5);
-          col *= max(1.0, 1.0 + (uLevel - 1.0) * 0.35);
+          col *= max(1.0, 1.0 + (uLevel - 1.0) * 0.1);
           // Aerial haze by distance (in the form's own units) and depth below the mist floor.
           float d = length(cameraPosition - vW) / uScale;
           float haze = 1.0 - exp(-max(0.0, d - 0.12) * 1.15);
@@ -599,7 +608,7 @@ export class Arms {
           depthWrite: false,
           vertexShader: /* glsl */ `varying vec3 vP; varying vec3 vW; void main(){ vP = position; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
           fragmentShader: /* glsl */ `
-            uniform vec3 uHaze; uniform vec3 uWarm; uniform vec3 uGold; uniform float uLevel; uniform float uTime;
+            uniform vec3 uHaze; uniform vec3 uWarm; uniform vec3 uGold; uniform float uLevel; uniform float uTime; uniform float uSculpt;
             varying vec3 vP; varying vec3 vW;
             ${glsl.hash}${glsl.simplex3D}${glsl.fbm}${glsl.dither}
             void main(){
@@ -609,7 +618,7 @@ export class Arms {
               float n2 = fbm(vec3(q * 9.0 + 4.0, uTime * 0.03)) * 0.5 + 0.5;
               // Light pooled under the hands and along the arms' line.
               float pool = exp(-length(q - vec2(0.0, 0.0)) * 7.0);
-              vec3 dusk = uHaze * (0.5 + 0.5 * n) * (0.8 + 0.3 * n2);
+              vec3 dusk = uHaze * (0.5 + 0.5 * n) * (0.8 + 0.3 * n2) * mix(1.0, 0.4, uSculpt);
               vec3 col = mix(dusk, mix(uGold, uWarm, n2) * 0.95, clamp(pool * (0.55 + 0.6 * n2), 0.0, 1.0));
               float a = smoothstep(3.0, 1.6, r) * (0.68 + 0.3 * n) * clamp(uLevel, 0.0, 1.0);
               gl_FragColor = vec4(col + dither(gl_FragCoord.xy), a);

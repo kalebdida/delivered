@@ -1,8 +1,8 @@
 import {
-  AdditiveBlending, AmbientLight, BackSide, BoxGeometry, BufferGeometry, CapsuleGeometry, CatmullRomCurve3, CircleGeometry, Color,
-  CylinderGeometry, DirectionalLight, DoubleSide, FogExp2, Group, HalfFloatType, LinearFilter, Mesh, MeshBasicMaterial,
+  AdditiveBlending, AmbientLight, BackSide, BoxGeometry, BufferGeometry, CatmullRomCurve3, CircleGeometry, Color,
+  CylinderGeometry, DirectionalLight, DoubleSide, FogExp2, Group, HalfFloatType, LatheGeometry, LinearFilter, Mesh, MeshBasicMaterial,
   MeshStandardMaterial, PerspectiveCamera, PlaneGeometry, PointLight, Scene, ShaderMaterial, Shape, ShapeGeometry, SphereGeometry,
-  TorusGeometry, TubeGeometry, Vector3, WebGLRenderTarget, type WebGLRenderer,
+  TorusGeometry, TubeGeometry, Vector2, Vector3, WebGLRenderTarget, type WebGLRenderer,
 } from 'three';
 import { CloudField, Dust, LightShaft, glsl, type AppId, type QualityTier } from '@delivered/core';
 
@@ -41,8 +41,33 @@ interface Preview {
   dispose(): void;
 }
 
-const figureMat = () => new MeshStandardMaterial({ color: '#cfc6b6', roughness: 0.85, emissive: '#3a2c1e', emissiveIntensity: 0.35 });
-
+/**
+ * The visitor, in the silhouette the three rooms share: a hood drawn back to a soft peak and
+ * opening onto shadow, a mantle over the shoulders, a long cloak. Each room dyes it its own colour.
+ */
+function hooded(color: string, emissive = '#3a2c1e', glow = 0.35): Group {
+  const g = new Group();
+  const mat = new MeshStandardMaterial({ color, roughness: 0.9, emissive, emissiveIntensity: glow });
+  // One unbroken line from the point of the hood, over the shoulders, down the cloak to the hem.
+  const profile: [number, number][] = [
+    [0, 1.8], [0.055, 1.76], [0.125, 1.66], [0.16, 1.54], [0.155, 1.43], [0.185, 1.36], [0.27, 1.27], [0.305, 1.1], [0.3, 0.8], [0.335, 0.4], [0.4, 0.05], [0.385, 0],
+  ];
+  const geo = new LatheGeometry(profile.map(([r, y]) => new Vector2(r, y)), 24);
+  const pos = geo.attributes.position!;
+  for (let i = 0; i < pos.count; i++) {
+    const y = pos.getY(i);
+    // The cloak is a little flat front to back, and the crown of the hood is drawn back to a soft point.
+    pos.setZ(i, pos.getZ(i) * 0.84 - Math.max(0, y - 1.5) * 0.42);
+  }
+  geo.computeVertexNormals();
+  const cloak = new Mesh(geo, mat);
+  const face = new Mesh(new CircleGeometry(0.1, 16), new MeshBasicMaterial({ color: '#0a0807' }));
+  face.scale.set(0.9, 1.2, 1);
+  face.position.set(0, 1.55, 0.118);
+  face.rotation.x = -0.12;
+  g.add(cloak, face);
+  return g;
+}
 /** A soft round glow on a camera-facing plane (halos, distant lights). */
 function softGlow(color: string, strength: number): Mesh {
   return new Mesh(
@@ -75,27 +100,29 @@ function wretchedPreview(): Preview {
   const hill = new Mesh(new SphereGeometry(9, 24, 12), new MeshStandardMaterial({ color: '#5d5a55', roughness: 1 }));
   hill.scale.set(2.4, 0.22, 1);
   hill.position.set(0.2, -0.6, -40);
-  const figure = new Mesh(new CapsuleGeometry(0.2, 0.95, 6, 12), figureMat());
-  figure.position.set(-0.22, 0.68, 1.4);
-  // The double: the same shape, lying in the dust, with two ember eyes.
-  const double = new Mesh(new CapsuleGeometry(0.21, 0.95, 6, 12), new MeshStandardMaterial({ color: '#050405', roughness: 1 }));
-  double.rotation.z = Math.PI / 2;
-  double.rotation.y = 0.5;
-  double.position.set(0.62, 0.22, 3.0);
+  // The visitor, seen from behind, facing the far light.
+  const figure = hooded('#cfc6b6');
+  figure.position.set(-0.16, 0, -0.4);
+  figure.rotation.y = Math.PI + 0.12;
+  // The double: the same shape, dark, lying in the dust behind them, with two ember eyes.
+  const double = hooded('#131115', '#000000', 0);
+  double.rotation.set(0, 0.9, Math.PI / 2 - 0.05);
+  double.scale.setScalar(0.62);
+  double.position.set(0.86, 0.2, 0.25);
   const eyes = new Group();
   for (const dx of [-0.045, 0.045]) {
-    const e = new Mesh(new SphereGeometry(0.018, 8, 6), new MeshBasicMaterial({ color: new Color('#FF6A3D').multiplyScalar(3) }));
-    e.position.set(1.1 + dx * 0.4, 0.3, 2.72 + dx);
+    const e = new Mesh(new SphereGeometry(0.02, 8, 6), new MeshBasicMaterial({ color: new Color('#FF6A3D').multiplyScalar(3) }));
+    e.position.set(0.02 + dx * 0.6, 0.27, 0.72 + dx * 0.7);
     eyes.add(e);
   }
-  const chainCurve = new CatmullRomCurve3([new Vector3(-0.18, 0.12, 1.5), new Vector3(0.05, 0.03, 1.8), new Vector3(0.3, 0.03, 2.3), new Vector3(0.5, 0.16, 2.7)]);
-  const chain = new Mesh(new TubeGeometry(chainCurve, 24, 0.022, 6), new MeshStandardMaterial({ color: '#8a8890', roughness: 0.4, metalness: 0.9 }));
+  const chainCurve = new CatmullRomCurve3([new Vector3(-0.1, 0.1, -0.3), new Vector3(0.0, 0.03, 0.2), new Vector3(0.18, 0.03, 0.25), new Vector3(0.42, 0.1, 0.4)]);
+  const chain = new Mesh(new TubeGeometry(chainCurve, 24, 0.02, 6), new MeshStandardMaterial({ color: '#8a8890', roughness: 0.4, metalness: 0.9 }));
   const key = new DirectionalLight('#ffd9a0', 3.4);
   key.position.set(0.3, 4, -10);
   const rim = new DirectionalLight('#8f9cc0', 1.5);
   rim.position.set(4, 3, 6);
   const fill = new PointLight('#ffe2b8', 5, 7, 1.6);
-  fill.position.set(-1.2, 1.8, 4.4);
+  fill.position.set(-1.3, 1.7, 2.2);
   scene.add(ground, hill, beam, halo, figure, double, eyes, chain, key, rim, fill, new AmbientLight('#4a4a58', 1.5));
   const dust = new Dust({ count: 160, bounds: [3, 2, 5], color: '#b8b2a8', size: 3, opacity: 0.4, seed: 'w' });
   dust.points.position.set(0, 1.6, 1);
@@ -105,7 +132,7 @@ function wretchedPreview(): Preview {
     camera,
     update(time, dt) {
       dust.update(dt);
-      figure.position.y = 0.68 + Math.sin(time * 1.1) * 0.012;
+      figure.rotation.z = Math.sin(time * 0.9) * 0.012;
       const flare = 2.2 + Math.sin(time * 2.3) * 0.8;
       eyes.children.forEach((e) => ((e as Mesh).material as MeshBasicMaterial).color.set('#FF6A3D').multiplyScalar(flare));
     },
@@ -128,7 +155,7 @@ function underneathPreview(tier: QualityTier): Preview {
   // Arms of light: two great soft arcs far below the clouds, open like cupped hands.
   const armMat = new ShaderMaterial({
     transparent: true, depthWrite: false, blending: AdditiveBlending, side: DoubleSide,
-    uniforms: { uTime: { value: 0 }, uColor: { value: new Color('#FFF4DA') } },
+    uniforms: { uTime: { value: 0 }, uColor: { value: new Color('#FFE6B4') } },
     vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
     fragmentShader: `uniform float uTime; uniform vec3 uColor; varying vec2 vUv;
       float arc(vec2 p, vec2 c, float r, float w){ float d = abs(length(p - c) - r); return smoothstep(w, 0.0, d); }
@@ -138,12 +165,16 @@ function underneathPreview(tier: QualityTier): Preview {
         float r = arc(p, vec2(-0.55, 0.55), 1.05, 0.34) * smoothstep(-0.25, 0.5, p.x + p.y * 0.3);
         float fade = smoothstep(1.0, 0.55, length(p));
         float a = (l + r) * fade * breathe;
-        gl_FragColor = vec4(uColor * a * 1.25, a); }`,
+        gl_FragColor = vec4(uColor * a * 1.9, a); }`,
   });
-  const arms = new Mesh(new PlaneGeometry(46, 46), armMat);
+  // Just above the cloud tops, so the light of them comes up through the gold.
+  const arms = new Mesh(new PlaneGeometry(34, 34), armMat);
   arms.rotation.x = -Math.PI / 2;
-  arms.position.set(0, -24, -6);
-  const figure = new Mesh(new CapsuleGeometry(0.16, 0.6, 5, 10), new MeshStandardMaterial({ color: '#3a3040', roughness: 0.9 }));
+  arms.position.set(0, -6.4, -5);
+  const figure = new Group();
+  const falling = hooded('#7d86b4', '#3e4270', 1.1);
+  falling.position.y = -0.8;
+  figure.add(falling);
   figure.scale.setScalar(0.8);
   figure.position.set(0, 2, -1.5);
   const key = new DirectionalLight('#fff0cc', 3);
@@ -187,8 +218,10 @@ function gainPreview(): Preview {
   const pool = new PointLight('#CFE0FF', 3.2, 6, 1.8);
   pool.position.set(-0.1, 0.6, -0.3);
   // A seated figure at the edge of the light, a lamp beside it.
-  const figure = new Mesh(new CapsuleGeometry(0.22, 0.5, 6, 12), figureMat());
-  figure.position.set(-0.55, 0.5, -0.4);
+  const figure = hooded('#5a5048', '#2a2018', 0.5);
+  figure.scale.set(1, 0.7, 1);
+  figure.position.set(-0.6, 0, -0.5);
+  figure.rotation.y = 0.5;
   const lamp = new Mesh(new SphereGeometry(0.06, 10, 8), new MeshBasicMaterial({ color: new Color('#FFB25C').multiplyScalar(3.2) }));
   lamp.position.set(0.62, 0.3, 0.5);
   const lampLight = new PointLight('#FFB25C', 1.6, 4, 2);
@@ -206,7 +239,7 @@ function gainPreview(): Preview {
 }
 
 const WINDOW_FRAG = /* glsl */ `
-uniform sampler2D uMap; uniform float uBright, uOpen, uTime; uniform vec3 uLight;
+uniform sampler2D uMap; uniform float uBright, uOpen, uTime, uIntro; uniform vec3 uLight;
 varying vec2 vUv;
 ${glsl.dither}
 void main(){
@@ -214,7 +247,7 @@ void main(){
   // Dim until hovered; edges of the window fall off like looking into a deep room.
   vec2 q = vUv - 0.5;
   float edge = 1.0 - smoothstep(0.25, 0.62, length(q * vec2(1.0, 0.85)));
-  c *= mix(0.66, 1.08, uBright) * mix(0.7, 1.0, edge);
+  c *= mix(0.66, 1.08, uBright) * mix(0.7, 1.0, edge) * uIntro;
   c += uLight * uOpen * 0.06;
   gl_FragColor = vec4(c + dither(gl_FragCoord.xy), 1.0);
 }`;
@@ -225,6 +258,8 @@ export class Portal {
   /** 0..1 hover amount (eased). */
   hover = 0;
   hovered = false;
+  /** 0 dark .. 1 lit: the arch igniting when the hub opens. */
+  intro = 1;
   /** Where the portal rests. */
   readonly home = new Vector3();
   private preview: Preview;
@@ -252,7 +287,7 @@ export class Portal {
     const uv = geo.attributes.uv!;
     for (let i = 0; i < pos.count; i++) uv.setXY(i, pos.getX(i) / w + 0.5, pos.getY(i) / h);
     this.windowMat = new ShaderMaterial({
-      uniforms: { uMap: { value: this.rt.texture }, uBright: { value: 0 }, uOpen: { value: 0 }, uTime: { value: 0 }, uLight: { value: new Color(def.light) } },
+      uniforms: { uMap: { value: this.rt.texture }, uBright: { value: 0 }, uOpen: { value: 0 }, uTime: { value: 0 }, uIntro: { value: 1 }, uLight: { value: new Color(def.light) } },
       vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
       fragmentShader: WINDOW_FRAG,
     });
@@ -315,12 +350,17 @@ export class Portal {
     const breathe = reduced ? 0 : Math.sin(time * 0.5 + this.phase);
     this.group.position.set(this.home.x, this.home.y + breathe * 0.07, this.home.z + this.hover * 0.35);
     this.group.rotation.y = (reduced ? 0 : Math.sin(time * 0.31 + this.phase) * 0.035) - this.home.x * 0.03;
-    const s = 1 + this.hover * 0.045;
+    // Ignition: the frame flares as it catches, then settles; the world behind it comes up with it.
+    const k = this.intro;
+    const lit = k * k * (3 - 2 * k);
+    const flare = Math.sin(Math.PI * k) ** 2;
+    const s = (1 + this.hover * 0.045) * (0.95 + 0.05 * lit);
     this.group.scale.setScalar(s);
     this.windowMat.uniforms.uBright!.value = this.hover;
-    this.windowMat.uniforms.uOpen!.value = this.hover;
-    this.frameMat.color.set('#F5C76B').multiplyScalar(1.35 + this.hover * 1.6 + breathe * 0.12);
-    this.glowMat.uniforms.uAmount!.value = 0.16 + this.hover * 0.26 + breathe * 0.02;
+    this.windowMat.uniforms.uOpen!.value = this.hover + flare * 2.5;
+    this.windowMat.uniforms.uIntro!.value = lit;
+    this.frameMat.color.set('#F5C76B').multiplyScalar((1.35 + this.hover * 1.6 + breathe * 0.12) * lit + flare * 3);
+    this.glowMat.uniforms.uAmount!.value = (0.16 + this.hover * 0.26 + breathe * 0.02) * lit + flare * 0.32;
   }
 
   dispose(): void {

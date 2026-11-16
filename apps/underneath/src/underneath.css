@@ -90,9 +90,9 @@
     filter: none;
   }
 }
-.un-support {
-  max-width: 34ch;
-  margin: 18px auto 0;
-  opacity: 0.75;
-  text-align: center;
+
+/* CH5: the visitor is held and there is nothing to steer, so the touch controls fade out. */
+.un-held .dl-vc {
+  opacity: 0;
+  pointer-events: none;
 }

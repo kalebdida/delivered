@@ -162,3 +162,18 @@ Note for WRETCHED: the prompt pairs θέλω with Romans 7:18, where the Greek h
 - **A room line in the About panel (WRETCHED #2, skipped).** The rooms have no About panel yet:
   it lives only in the hub. Adding one to `Chrome` is a new feature (UI, i18n, focus handling),
   not a small fix, so it waits for a later core pass.
+
+## Final art direction
+- **One visitor silhouette.** A hood drawn back to a soft point and opening onto shadow, a mantle
+  over the shoulders, a long cloak. Each room keeps its own colour. The hub's previews use it too.
+- **The hub's opening is a hand-off, not a fade.** The loader's title becomes the wordmark; the
+  scene comes up under the fading loader. `LoadingScreen.finish` takes `onLeave`, and `createApp`
+  starts the scene reveal there, so no room holds a blank frame between loader and scene.
+- **The end card's support line lives in the core**, the same in every room.
+- **Instant fades never multiply by the frame time** (`PostFX.render`): `Infinity * 0` is NaN and
+  left the fade stuck. This could leave WRETCHED black from its first chapter.
+- **`pnpm shots:slow`** (`scripts/shots-slow.mjs`) is the capture to use for reviews in software
+  WebGL: it runs the page on a virtual clock, takes `app:chapter:seconds:viewport[:query]` specs
+  and can capture several moments in one load.
+- **WRETCHED CH6 cuts in close on the chain** at the strike (landscape only), because the links
+  turning to gold are the point of the moment and cannot be read from the wide shot.

@@ -14,7 +14,7 @@ import { ARCH, PORTALS, Portal } from './portals';
 const INTRO = { en: 'Who will deliver me?', am: 'ማን ያድነኛል?' } as const;
 
 const AURORA_FRAG = /* glsl */ `
-uniform float uTime; varying vec3 vDir;
+uniform float uTime; uniform float uIntro; varying vec3 vDir;
 ${glsl.hash}
 ${glsl.simplex3D}
 ${glsl.dither}
@@ -25,7 +25,7 @@ void main(){
   float n1 = snoise(vec3(d.x * 1.6, h * 0.9 - uTime * 0.012, uTime * 0.018));
   float n2 = snoise(vec3(d.x * 3.4 + 4.0, h * 2.2, uTime * 0.03 + 7.0));
   float band = smoothstep(-0.25, 0.75, n1 + 0.35 * n2);
-  float mask = smoothstep(-0.15, 0.3, h) * smoothstep(0.95, 0.35, h) * smoothstep(0.2, -0.9, d.z);
+  float mask = uIntro * smoothstep(-0.15, 0.3, h) * smoothstep(0.95, 0.35, h) * smoothstep(0.2, -0.9, d.z);
   vec3 violet = vec3(0.10, 0.09, 0.26), teal = vec3(0.03, 0.14, 0.17), gold = vec3(0.30, 0.20, 0.07);
   vec3 c = mix(violet, teal, smoothstep(-0.6, 0.6, n2));
   c = mix(c, gold, smoothstep(0.35, 1.0, n1) * 0.55);
@@ -53,6 +53,10 @@ class Hub extends Chapter {
   private frame = 0;
   private readonly _v = new Vector3();
   private dom!: HTMLElement;
+  /** Chapter time at which the loading screen let go (-1 while it is still up). */
+  private introAt = -1;
+  private readonly homePos = new Vector3();
+  private readonly homeLook = new Vector3();
 
   enter(ctx: CoreContext): void {
     const { engine, rig, postfx } = ctx;
@@ -63,7 +67,7 @@ class Hub extends Chapter {
     rig.parallax = 1.6;
 
     this.aurora = new ShaderMaterial({
-      side: BackSide, depthWrite: false, uniforms: { uTime: { value: 0 } },
+      side: BackSide, depthWrite: false, uniforms: { uTime: { value: 0 }, uIntro: { value: 0 } },
       vertexShader: `varying vec3 vDir; void main(){ vDir = position; vec4 p = projectionMatrix * mat4(mat3(viewMatrix)) * vec4(position, 1.0); gl_Position = p.xyww; }`,
       fragmentShader: AURORA_FRAG,
     });
@@ -106,6 +110,7 @@ class Hub extends Chapter {
     this.own(engine.onResize(() => this.layout()));
 
     this.buildDom(ctx);
+    this.awaitLoader();
     const canvas = engine.renderer.domElement;
     const move = (e: PointerEvent) => {
       this.pointer.set((e.clientX / window.innerWidth) * 2 - 1, (e.clientY / window.innerHeight) * 2 - 1);
@@ -147,9 +152,59 @@ class Hub extends Chapter {
     // Portals take about a third of the height on desktop and sit between the wordmark and
     // their labels, clear of the footer.
     const dist = Math.max(halfW / (tan * aspect), ARCH.height / 0.34 / (2 * tan));
-    const lookY = ARCH.height * 0.5 + 2 * dist * tan * (portrait ? 0.07 : 0.035);
+    const lookY = ARCH.height * 0.5 + 2 * dist * tan * (portrait ? 0.03 : 0.035);
     rig.setFov(fov);
-    if (!this.leaving) rig.snapTo(new Vector3(0, lookY - 0.1, dist), new Vector3(0, lookY, 0));
+    this.homePos.set(0, lookY - 0.1, dist);
+    this.homeLook.set(0, lookY, 0);
+    if (!this.leaving) rig.snapTo(this.homePos.clone(), this.homeLook.clone());
+  }
+
+  /** The opening begins the moment the loading screen lets go. */
+  private awaitLoader(): void {
+    const loader = document.querySelector<HTMLElement>('.dl-loader');
+    if (!loader || loader.classList.contains('is-done')) return this.open(loader);
+    const mo = new MutationObserver(() => {
+      if (!loader.classList.contains('is-done')) return;
+      mo.disconnect();
+      this.open(loader);
+    });
+    mo.observe(loader, { attributes: true, attributeFilter: ['class'] });
+    this.own(() => mo.disconnect());
+  }
+
+  /**
+   * The first two seconds. The loader's title does not fade: it rises and becomes the wordmark,
+   * while behind it the camera eases in, the aurora swells and the three arches catch light one
+   * after another, left to right, the way the gold line was drawn.
+   */
+  private open(loader: HTMLElement | null): void {
+    const { rig } = this.ctx;
+    const dom = this.dom;
+    this.introAt = this.time;
+    const word = dom.querySelector<HTMLElement>('.hub__wordmark');
+    const from = loader?.querySelector<HTMLElement>('.dl-loader__title');
+    if (!prefersReducedMotion()) {
+      if (word && from) {
+        const a = from.getBoundingClientRect();
+        const b = word.getBoundingClientRect();
+        if (a.width > 0 && b.width > 0) {
+          dom.classList.add('is-handoff');
+          word.style.transition = 'none';
+          word.style.transform = `translate(${a.left + a.width / 2 - (b.left + b.width / 2)}px, ${a.top + a.height / 2 - (b.top + b.height / 2)}px) scale(${a.width / b.width})`;
+          from.style.visibility = 'hidden';
+          void word.offsetWidth;
+          word.style.transition = '';
+          word.style.transform = '';
+          setTimeout(() => dom.classList.remove('is-handoff'), 1800);
+        }
+      }
+      if (!this.leaving) {
+        const back = this.homePos.clone().add(new Vector3(0, -0.3, this.homePos.z * 0.17));
+        rig.snapTo(back, this.homeLook.clone());
+        rig.playPath([this.homePos.clone()], { duration: 3.4, ease: 'expo.out', lookAt: this.homeLook.clone() });
+      }
+    }
+    dom.classList.add('is-in');
   }
 
   private pick(): Portal | null {
@@ -279,7 +334,6 @@ class Hub extends Chapter {
         h('p', { class: 'hub__fine' }, t('core.support') + ' ', h('a', { href: 'https://findahelpline.com', target: '_blank', rel: 'noopener noreferrer' }, t('hub.support.link'))),
       );
       dom.replaceChildren(head, nav, footer);
-      requestAnimationFrame(() => requestAnimationFrame(() => dom.classList.add('is-in')));
     };
     render();
     this.own(onLanguageChange(render));
@@ -293,7 +347,13 @@ class Hub extends Chapter {
     this.dust.update(dt);
     this.dustFar.update(dt);
     this.frame++;
+    // The opening: 0 while the loader is up, then each arch ignites in turn.
+    const ti = this.introAt < 0 ? -1 : this.time - this.introAt;
+    const k = ti < 0 ? 0 : reduced ? 1 : Math.min(1, ti / 2.8);
+    this.aurora.uniforms.uIntro!.value = k * k * (3 - 2 * k) * (1 + 0.8 * Math.sin(Math.PI * k));
+    if (!this.leaving) this.ctx.postfx.params.bloom = 0.75 + 0.7 * Math.sin(Math.PI * Math.min(1, Math.max(0, ti) / 2));
     this.portals.forEach((p, i) => {
+      p.intro = ti < 0 ? 0 : reduced ? 1 : Math.min(1, Math.max(0, (ti - 0.2 - i * 0.24) / 1.15));
       p.update(this.time, dt, reduced);
       // The hovered portal renders every frame; the others alternate to halve the cost.
       if (p.hovered || (this.frame + i) % 2 === 0) p.render(engine.renderer, this.time, p.hovered ? dt : dt * 2, this.pointer);

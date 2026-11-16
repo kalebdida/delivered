@@ -61,3 +61,23 @@ and the CH5 arms read as dust. The scores below are for this pass's frames.
 | CH5 the reveal | 7 | – | glowing ghost tube; column of light |
 | CH6 dwelling | 7 | – | – |
 | CH7 playground | 6 | 6 | camera start; finish door placement |
+
+
+## Final art direction (desktop 1440x900 and mobile 390x844, medium tier, SwiftShader)
+
+Captured with `scripts/shots-slow.mjs` (one virtual clock for the page).
+
+| Frame | Before | After | What changed |
+| --- | --- | --- | --- |
+| CH5 the catch, 11 s | 9 / 8.5 | 9 / 8.5 | Unchanged on purpose. On touch screens the joystick now fades out for the whole chapter (it sat over the mist with nothing to steer). |
+| CH5 push-in, 16.6 s | 7 | 7.5 | The words leave at 14.8 s, so the close-up is the image alone (no grey scrim patch on the palm). The camera goes closer (the visitor is about twice the size). Up close the arms' even inner glow gives way to a pool of light around the one they hold, falling to amber toward the edges. The visitor's dusk-blue hooded cloak is now the clear focal point against warm amber. Still short of 8: the palm is one large smooth surface and software bloom lifts all of it, so the falloff is gentle rather than dramatic. |
+| CH5 the reveal, 27 s | 7 | 8 | The grey-mauve dusk falls away to a deep indigo night with stars (`sky.deepen`), so the gold column, the halos and the arms carry the frame. The arms stay warm instead of clipping to white, the mist floor turns violet, and the one they hold is a clear warm star at the foot of the column. The camera ends lower and looks lower, so the arms sit whole in the bottom third instead of being cut by the frame edge. |
+| Visitor | n/a | n/a | the same hooded silhouette as the other rooms: peaked hood, a mantle over the shoulders, the face in shadow |
+
+Re-shoot log (limit: two per frame):
+- Push-in: first shot (after the first batch) was still a cream wash; re-shoot 1 added the pool
+  of light but its falloff was scaled for the wrong units and did nothing visible; re-shoot 2 is
+  the 7.5 above. Next step, unshot: lower the bloom during the close-up and steepen the falloff
+  (`pool` in `arms.ts`).
+- Reveal: first shot had strong contrast but cropped the arms at the bottom edge on a pure black
+  sky; re-shoot 1 is the 8 above. The arms read as two ribbons of light from that distance.

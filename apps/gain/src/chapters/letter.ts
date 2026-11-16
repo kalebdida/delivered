@@ -95,6 +95,22 @@ export class Letter extends GChapter {
     this.root.add(this.scroll);
     void document.fonts?.load('italic 400 44px "Cormorant Garamond"').then(() => (this.dirty = true));
 
+    // Development and review: `?leg=rome` or `?leg=philippi` jumps straight to that leg of the flight.
+    const leg = new URLSearchParams(location.search).get('leg');
+    if (leg === 'rome' || leg === 'philippi') {
+      this.at(0.4, () => {
+        this.sheet.visible = false;
+        if (leg === 'rome') this.toRome();
+        else {
+          ctx.world.inCell = false;
+          ctx.world.release();
+          this.streak = new Streak(0.09);
+          this.root.add(this.streak.group);
+          this.toPhilippi();
+        }
+      });
+      return;
+    }
     this.card({ word: 'τὸ ζῆν Χριστός', lang: 'grc', translit: 'to zēn Christos', english: 'to live is Christ', ref: 'Philippians 1:21', number: 3 });
     this.at(4.2, () => ctx.ui.hud.set('bottom-center', ctx.input.device === 'touch' ? ctx.t('gain.letter.hint') : `${ctx.t('gain.letter.hint')} · ${ctx.t('gain.letter.hintKeys')}`));
   }
@@ -250,7 +266,7 @@ export class Letter extends GChapter {
       const p = new Vector3(o.x + k * 70, o.y + 2 + easing.outCubic(k) * 12, o.z + 4 + k * 34);
       this.streak.moveTo(p);
       // Above and behind, looking down over the roofs.
-      ctx.rig.position.lerp(p.clone().add(new Vector3(-9, 9, -12)), 1 - Math.exp(-dt * 2.2));
+      ctx.rig.position.lerp(p.clone().add(new Vector3(-6.5, 6.5, -9.5)), 1 - Math.exp(-dt * 2.2));
       ctx.rig.target.lerp(p.clone().add(new Vector3(10, -3.2, 13)), 1 - Math.exp(-dt * 4));
       this.rome.update(dt, () => {}, () => {});
       if (this.flag('toSea', t > 5)) ctx.postfx.fadeTo('black', 1, 0.5);
@@ -275,6 +291,10 @@ export class Letter extends GChapter {
       this.streak.moveTo(from.lerp(this.house.window.clone().add(new Vector3(0, 0, -0.6)), k));
       this.house.fill = smoothstep(2.2, 5.5, t);
       this.house.update(dt);
+      // A slow crane: from above the eaves, where the tiled roof reads, easing down toward the light.
+      const c = easing.inOutCubic(clamp(t / 8.5));
+      ctx.rig.position.lerp(new Vector3(5.2 - c * 0.9, 6.9 - c * 1.3, 11.2 - c * 1.4), 1 - Math.exp(-dt * 3));
+      ctx.rig.target.lerp(new Vector3(0.1, 2.15 - c * 0.2, 0.6), 1 - Math.exp(-dt * 3));
       if (this.flag('arrive', t > 2.4)) {
         ctx.audio.chord([293.7, 440, 587.3, 740], { level: 0.2, duration: 6, timbre: 'choir' });
         haptic(18);
@@ -302,12 +322,12 @@ export class Letter extends GChapter {
     ctx.world.release();
     this.rome = new Rome({ maxInstances: Math.min(400, ctx.quality.budget.maxInstances), guards: false });
     this.root.add(this.rome.group);
-    this.streak = new Streak(0.09);
+    this.streak = new Streak(0.2);
     this.streak.reset(this.rome.origin);
     this.root.add(this.streak.group);
     this.rome.lightWindows(0.6);
-    ctx.rig.snapTo(this.rome.origin.clone().add(new Vector3(-9, 9, -8)), this.rome.origin.clone().add(new Vector3(10, -3, 13)));
-    this.streak.light = 6;
+    ctx.rig.snapTo(this.rome.origin.clone().add(new Vector3(-6.5, 6.5, -7)), this.rome.origin.clone().add(new Vector3(10, -3, 13)));
+    this.streak.light = 16;
     ctx.engine.exposure = 1.1;
     ctx.postfx.fadeTo('white', 0, 1.2);
     this.next('rome');
@@ -321,9 +341,14 @@ export class Letter extends GChapter {
     this.map = new MapWorld({ moon: [11, 1.42] });
     this.root.add(this.map.group);
     ctx.world.air('flight');
-    this.streak!.light = 1.2;
+    // Over the sea the letter is a small, distant light again.
+    this.streak?.group.removeFromParent();
+    this.streak?.dispose();
+    this.streak = new Streak(0.09);
+    this.root.add(this.streak.group);
+    this.streak.light = 1.2;
     const start = ROUTE.getPointAt(0);
-    this.streak!.reset(start);
+    this.streak.reset(start);
     ctx.rig.snapTo(start.clone().add(new Vector3(-3.2, 1.2, 0.9)), start.clone().add(new Vector3(4, -0.8, 0.8)));
     ctx.rig.setFov(55);
     ctx.postfx.fadeTo('black', 0, 1.0);
@@ -340,8 +365,8 @@ export class Letter extends GChapter {
     this.streak!.light = 2;
     const win = this.house.window;
     this.streak!.reset(win.clone().add(new Vector3(3, 6, 8)));
-    ctx.rig.snapTo(new Vector3(3.2, 2.5, 8), new Vector3(0, 1.7, 1.4));
-    ctx.rig.setFov(48);
+    ctx.rig.snapTo(new Vector3(5.2, 6.9, 11.2), new Vector3(0.1, 2.15, 0.6));
+    ctx.rig.setFov(44);
     ctx.engine.exposure = 1.15;
     ctx.postfx.fadeTo('black', 0, 1.2);
     this.next('philippi');

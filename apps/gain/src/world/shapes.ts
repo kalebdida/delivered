@@ -3,6 +3,7 @@
 // tree. Everything is built from lathes, open cylinders and bevelled extrusions, so edges round
 // off and catch a rim light instead of reading as boxes.
 import {
+  BoxGeometry,
   BufferAttribute,
   BufferGeometry,
   CanvasTexture,
@@ -269,3 +270,26 @@ export function cypressGeometry(): BufferGeometry {
   return lathe([[0, 0], [0.35, 0.3], [0.55, 1.6], [0.5, 3.2], [0.32, 4.6], [0.12, 5.6], [0, 6]], 10);
 }
 
+
+/**
+ * One city house for instancing (Rome's skyline), in a unit box centred on the origin so a
+ * non-uniform scale gives every house its own proportions. Battered walls that lean in toward the
+ * eaves, a plinth course, a cornice under the roof, and a lower wing with its own parapet, so the
+ * silhouette steps and every edge catches the rim light.
+ */
+export function cityHouseGeometry(): BufferGeometry {
+  const body = new BoxGeometry(1, 1, 1, 1, 1, 1);
+  const bp = body.attributes.position!;
+  for (let i = 0; i < bp.count; i++) if (bp.getY(i) > 0) bp.setXYZ(i, bp.getX(i) * 0.93, bp.getY(i), bp.getZ(i) * 0.93);
+  const cornice = new BoxGeometry(1.0, 0.045, 1.0).translate(0, 0.478, 0);
+  const plinth = new BoxGeometry(1.05, 0.09, 1.05).translate(0, -0.455, 0);
+  const wing = new BoxGeometry(0.42, 0.52, 0.66);
+  const wp = wing.attributes.position!;
+  for (let i = 0; i < wp.count; i++) if (wp.getY(i) > 0) wp.setXYZ(i, wp.getX(i) * 0.94, wp.getY(i), wp.getZ(i) * 0.94);
+  wing.translate(0.68, -0.24, 0.08);
+  const parapet = new BoxGeometry(0.44, 0.04, 0.68).translate(0.68, 0.03, 0.08);
+  const stair = new BoxGeometry(0.16, 0.2, 0.5).translate(-0.57, -0.4, -0.1);
+  const g = mergeGeometries([body, cornice, plinth, wing, parapet, stair])!;
+  g.computeVertexNormals();
+  return g;
+}

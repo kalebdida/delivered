@@ -2,8 +2,8 @@
 // in the figure's own frame, with the airflow as wind. On islands a platformer controller (jump,
 // coyote time, ledge grab) moves it; in the fall the chapters drive its position directly.
 import {
-  BufferAttribute, BufferGeometry, CapsuleGeometry, Color, DoubleSide, Group, Mesh, MeshStandardMaterial, PointLight, Quaternion,
-  SphereGeometry, Vector3,
+  BufferAttribute, BufferGeometry, CapsuleGeometry, Color, DoubleSide, Group, LatheGeometry, Mesh, MeshStandardMaterial, PointLight, Quaternion,
+  SphereGeometry, Vector2, Vector3,
 } from 'three';
 import { createCloth, damp, type Verlet } from '@delivered/core';
 import type { Material } from 'three';
@@ -254,16 +254,35 @@ export class Visitor {
   constructor() {
     // A dusk-blue cloak: the complement of the gold, never a black hole against the sun.
     const cloth = withRim(new MeshStandardMaterial({ color: '#646d98', roughness: 0.7, side: DoubleSide, emissive: new Color('#36385e'), emissiveIntensity: 0.75 }));
-    const skin = withRim(new MeshStandardMaterial({ color: '#efe3d0', roughness: 0.6, emissive: new Color('#f5c76b'), emissiveIntensity: 0.12 }));
+    // Inside the hood there is only shadow: no face, in any room.
+    const skin = new MeshStandardMaterial({ color: '#221c2c', roughness: 1 });
 
     const torso = new Mesh(new CapsuleGeometry(0.2, 0.5, 4, 12), cloth);
     torso.position.y = 0.95;
-    const head = new Mesh(new SphereGeometry(0.17, 20, 14), skin);
+    const head = new Mesh(new SphereGeometry(0.155, 20, 14), skin);
     head.position.y = 1.5;
     // The hood: the cloak drawn up over the head, open at the face.
     const hood = new Mesh(new SphereGeometry(0.205, 24, 16, Math.PI / 2 + 0.75, Math.PI * 2 - 1.5, 0, Math.PI * 0.74), cloth);
     hood.position.set(0, 1.51, -0.02);
     hood.scale.set(1, 1.1, 1.06);
+    // Draw the crown back into a soft peak and lay a mantle over the shoulders: the same hooded
+    // silhouette the visitor has in WRETCHED and GAIN.
+    const hp = hood.geometry.attributes.position!;
+    for (let i = 0; i < hp.count; i++) {
+      const y = hp.getY(i);
+      const z = hp.getZ(i);
+      if (y > 0 && z < 0.02) {
+        const k = (y / 0.205) * Math.min(1, (0.02 - z) / 0.15);
+        hp.setY(i, y + k * 0.06);
+        hp.setZ(i, z - k * 0.09);
+      }
+    }
+    hood.geometry.computeVertexNormals();
+    const mantle = new Mesh(
+      new LatheGeometry([[0.08, 1.43], [0.19, 1.38], [0.275, 1.27], [0.31, 1.12], [0.29, 0.97]].map(([r, y]) => new Vector2(r!, y!)), 22),
+      cloth,
+    );
+    mantle.scale.z = 0.86;
     this.coreMat = new MeshStandardMaterial({ color: '#000000', emissive: new Color('#ffd58a'), emissiveIntensity: 3.2 });
     this.core = new Mesh(new SphereGeometry(0.07, 12, 8), this.coreMat);
     this.core.position.set(0, 1.08, 0.17);
@@ -273,7 +292,7 @@ export class Visitor {
       this.legs.push(leg);
       this.body.add(leg);
     }
-    this.body.add(torso, head, hood, this.core);
+    this.body.add(torso, head, hood, mantle, this.core);
     this.glow = new PointLight('#ffd9a0', 2.2, 7, 1.6);
     this.glow.position.set(0, 1.1, 0.4);
     this.body.add(this.glow);

@@ -29,7 +29,7 @@ import {
   type Material,
 } from 'three';
 import { Dust, Sky, glsl, seededRandom } from '@delivered/core';
-import { cypressGeometry, gableGeometry, guardGeometry, tileTexture } from './shapes';
+import { cityHouseGeometry, cypressGeometry, gableGeometry, guardGeometry, tileTexture } from './shapes';
 import { flagstones, masonry } from './textures';
 
 /**
@@ -56,9 +56,13 @@ function litMaterial(mat: MeshStandardMaterial, gold = '#F5C76B', strength = 1.4
   return mat;
 }
 
-/** Houses: lit windows drawn procedurally on the walls (only where aLit says so). */
+/**
+ * Houses: plaster that differs from house to house and darkens toward the street, arched window
+ * openings on every wall (dark recesses, or lamplit where aLit says so, with a little warm spill
+ * on the plaster around them) and a doorway on the front.
+ */
 function houseMaterial(): MeshStandardMaterial {
-  const mat = new MeshStandardMaterial({ color: '#857560', roughness: 0.95, emissive: new Color('#FFB25C'), emissiveIntensity: 2.2 });
+  const mat = new MeshStandardMaterial({ color: '#a38c6c', roughness: 0.95, emissive: new Color('#FFB25C'), emissiveIntensity: 2.6 });
   mat.onBeforeCompile = (shader) => {
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', '#include <common>\nattribute float aLit; attribute float aSeed; varying float vLit; varying float vSeed; varying vec3 vP; varying vec3 vNo;')
@@ -66,17 +70,37 @@ function houseMaterial(): MeshStandardMaterial {
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', `#include <common>\nvarying float vLit; varying float vSeed; varying vec3 vP; varying vec3 vNo;\n${glsl.hash}`)
       .replace(
+        '#include <color_fragment>',
+        `#include <color_fragment>
+        // Openings: a sparse grid on the walls (unit box, so position is -0.5..0.5).
+        vec2 wuv = abs(vNo.x) > 0.5 ? vP.zy : vP.xy;
+        vec2 wg = (wuv + 0.5) * vec2(3.0, 2.0);
+        vec2 wcell = floor(wg);
+        vec2 wq = (fract(wg) - vec2(0.5, 0.44)) / vec2(0.14, 0.2);
+        float wallMask = step(abs(vNo.y), 0.5) * step(abs(wuv.x), 0.5) * step(abs(wuv.y), 0.43);
+        float archTop = step(length(vec2(wq.x, max(wq.y - 0.5, 0.0) / 0.5)), 1.0);
+        float opening = step(abs(wq.x), 1.0) * step(-1.0, wq.y) * archTop * wallMask;
+        float hasWin = step(0.42, hash12(wcell + vSeed * 31.0));
+        float isLamp = step(0.45, hash12(wcell * 3.7 + vSeed * 17.0));
+        // The doorway, on the front wall only.
+        vec2 dq = vec2(vP.x + 0.12, vP.y + 0.5) / vec2(0.075, 0.3);
+        float door = step(0.5, vNo.z) * step(abs(dq.x), 1.0) * step(dq.y, 1.0) * step(length(vec2(dq.x, max(dq.y - 0.7, 0.0) / 0.3)), 1.0);
+        float hole = max(opening * hasWin, door);
+        float tone = hash12(vec2(vSeed * 91.7, 3.1));
+        diffuseColor.rgb *= mix(vec3(0.8, 0.72, 0.64), vec3(1.16, 1.04, 0.88), tone);
+        diffuseColor.rgb *= 0.66 + 0.34 * smoothstep(-0.5, -0.05, vP.y);
+        diffuseColor.rgb *= 1.0 - 0.86 * hole;`,
+      )
+      .replace(
         '#include <emissivemap_fragment>',
         `#include <emissivemap_fragment>
-        // Windows: a sparse grid on the side walls (unit box, so position is -0.5..0.5).
-        vec2 wuv = abs(vNo.x) > 0.5 ? vP.zy : vP.xy;
-        vec2 cell = floor((wuv + 0.5) * vec2(3.0, 2.0));
-        vec2 f = fract((wuv + 0.5) * vec2(3.0, 2.0));
-        float win = step(0.35, f.x) * step(f.x, 0.65) * step(0.3, f.y) * step(f.y, 0.7) * step(0.5, hash12(cell + vSeed * 31.0)) * step(abs(vNo.y), 0.5);
-        totalEmissiveRadiance *= win * vLit * (0.7 + 0.6 * hash12(cell * 7.0 + vSeed));`,
+        float lamp = hasWin * isLamp * vLit * (0.65 + 0.7 * hash12(wcell * 7.0 + vSeed));
+        float pane = opening * (1.0 - 0.55 * step(abs(wq.x), 0.1)) * (1.15 - 0.4 * wq.y);
+        float spill = exp(-dot(wq, wq) * 0.55) * (1.0 - opening) * wallMask * 0.1;
+        totalEmissiveRadiance *= (pane + spill) * lamp + door * vLit * 0.35 * (1.0 - dq.y * 0.6);`,
       );
   };
-  mat.customProgramCacheKey = () => 'gain-house';
+  mat.customProgramCacheKey = () => 'gain-house-2';
   return mat;
 }
 
@@ -128,8 +152,11 @@ export class Rome {
 
     // Ground: worn paving in the courtyard, packed earth beyond.
     const floor = flagstones(512, 'praetorium', '#857a6c', 0.78);
-    for (const t of [floor.map, floor.normalMap, floor.roughnessMap]) t.repeat.set(70, 70);
-    const ground = new Mesh(new PlaneGeometry(400, 400).rotateX(-Math.PI / 2), new MeshStandardMaterial({ map: floor.map, normalMap: floor.normalMap, roughnessMap: floor.roughnessMap, color: '#c4b8aa', roughness: 1 }));
+    // Seen from the air (the letter's flight) the streets are fine-grained, dark, moonlit stone.
+    const aerial = opts.guards === false;
+    for (const t of [floor.map, floor.normalMap, floor.roughnessMap]) t.repeat.set(aerial ? 150 : 70, aerial ? 150 : 70);
+    const ground = new Mesh(new PlaneGeometry(400, 400).rotateX(-Math.PI / 2), new MeshStandardMaterial({ map: floor.map, normalMap: floor.normalMap, roughnessMap: floor.roughnessMap, color: aerial ? '#b3a898' : '#c4b8aa', roughness: 1 }));
+    if (aerial) (ground.material as MeshStandardMaterial).normalScale.set(0.5, 0.5);
     ground.receiveShadow = true;
     this.group.add(ground);
 
@@ -213,12 +240,12 @@ export class Rome {
 
     // The city around the courtyard: houses in a broad ring, hills beyond.
     const houseCount = Math.min(1100, Math.max(260, Math.round(opts.maxInstances * 0.5)));
-    const hGeo = new BoxGeometry(1, 1, 1);
+    const hGeo = cityHouseGeometry();
     const roofGeo = gableGeometry(0.08);
     const tiles = tileTexture('rome-tiles');
-    tiles.repeat.set(0.6, 0.6);
+    tiles.repeat.set(2.2, 2.2);
     const houses = new InstancedMesh(hGeo, houseMaterial(), houseCount);
-    const roofs = new InstancedMesh(roofGeo, new MeshStandardMaterial({ map: tiles, color: '#a07868', roughness: 0.85 }), houseCount);
+    const roofs = new InstancedMesh(roofGeo, new MeshStandardMaterial({ map: tiles, color: '#927466', roughness: 0.85 }), houseCount);
     this.houseLit = new Float32Array(houseCount);
     const seeds = new Float32Array(houseCount);
     let placed = 0;
@@ -259,11 +286,11 @@ export class Rome {
     // Moonlight over everything, and a little cool fill.
     // Key: the moon, high on the left. Rim: a cool back light from beyond the cell block that
     // outlines every helmet, shoulder and roof edge against the dark. Fill: a little cool sky.
-    const moon = new DirectionalLight('#b4c4e6', 2.8);
+    const moon = new DirectionalLight('#b4c4e6', aerial ? 3.8 : 2.8);
     moon.position.set(-60, 90, -40);
     const rim = new DirectionalLight('#8ea8e0', 2.2);
     rim.position.set(-20, 18, -80);
-    this.group.add(moon, rim, new HemisphereLight('#3e4e78', '#1a1410', 1.0));
+    this.group.add(moon, rim, new HemisphereLight('#3e4e78', '#1a1410', aerial ? 1.7 : 1.0));
     // Cypresses on the skyline, between the city and the hills.
     const cyp = new InstancedMesh(cypressGeometry(), new MeshStandardMaterial({ color: '#1c2a24', roughness: 1 }), 60);
     for (let i = 0; i < 60; i++) {

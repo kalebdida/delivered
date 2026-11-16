@@ -180,9 +180,12 @@ export async function createApp<Ctx extends CoreContext = CoreContext>(opts: App
   postfx.render(0);
   loader.setProgress(1);
   loop.start();
-  await loader.finish({ begin: (opts.begin ?? true) && !shot && Director.deepLink() === null });
-  await audio.unlock();
-  await transition.to(0, 1.2);
+  let reveal: Promise<unknown> = Promise.resolve();
+  await loader.finish({
+    begin: (opts.begin ?? true) && !shot && Director.deepLink() === null,
+    onLeave: () => (reveal = Promise.all([audio.unlock(), transition.to(0, 1.4)])),
+  });
+  await reveal;
 
   window.addEventListener('pagehide', () => {
     offSounds();

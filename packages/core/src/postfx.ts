@@ -446,7 +446,9 @@ export class PostFX {
     const q = this.engine.quality.budget;
     // fades
     if (this.fade.value !== this.fade.target) {
-      const step = this.fade.rate * dt;
+      // An instant fade (rate Infinity) on a zero-length frame must not become Infinity * 0 = NaN:
+      // that would leave the fade stuck and the frame black for the rest of the session.
+      const step = this.fade.rate === Infinity ? Infinity : this.fade.rate * dt;
       const d = this.fade.target - this.fade.value;
       this.fade.value = Math.abs(d) <= step ? this.fade.target : this.fade.value + Math.sign(d) * step;
     }

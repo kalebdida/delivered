@@ -35,6 +35,21 @@
   line-height: 1;
   white-space: nowrap;
   color: var(--bone);
+  transition: transform 1500ms var(--ease-out-expo);
+}
+/* The opening: the loader's title hands over to the wordmark, which rises above the fading loader. */
+.hub.is-handoff {
+  z-index: 101;
+}
+.hub.is-handoff .hub__wordmark span {
+  opacity: 1;
+  transform: none;
+  filter: none;
+  transition: none;
+}
+.dl-loader__title {
+  letter-spacing: 0.42em;
+  margin-right: -0.42em;
 }
 .hub__wordmark span {
   display: inline-block;
@@ -90,6 +105,11 @@
   text-align: center;
   text-decoration: none;
   will-change: transform;
+  opacity: 0;
+  transition: opacity 1400ms var(--ease-out-expo) 1000ms;
+}
+.hub.is-in .hub__label {
+  opacity: 1;
 }
 .hub__label > * {
   transition:

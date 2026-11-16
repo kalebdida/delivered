@@ -162,13 +162,13 @@ export class House {
     const D = 4;
     const H = 2.8;
     const tiles = tileTexture('philippi-tiles');
-    tiles.repeat.set(0.5, 0.5);
+    tiles.repeat.set(2, 2);
     const house = buildHouse({
       w: W,
       d: D,
       h: H,
       plaster,
-      roof: new MeshStandardMaterial({ map: tiles, color: '#c09080', roughness: 0.85 }),
+      roof: new MeshStandardMaterial({ map: tiles, color: '#a48878', roughness: 0.85 }),
       door: { x: -0.5, w: 0.8 },
       windows: [{ x: 0.9, y: 1.5, w: 0.6, h: 0.5 }],
       pitch: 1.2,
@@ -215,13 +215,14 @@ export class House {
     }
     // Key: the moon from the front left. Rim: cool from behind, outlining the roof, the trees and
     // the wall against the sky. The warm light is the house itself (door, window, spill).
-    const moon = new DirectionalLight('#a8bce4', 1.3);
-    moon.position.set(-8, 12, 10);
+    // The moon stands high in front, so the tiled front slope of the roof catches it.
+    const moon = new DirectionalLight('#a8bce4', 3.4);
+    moon.position.set(-5, 13, 9);
     const rim = new DirectionalLight('#7f98d6', 1.6);
     rim.position.set(6, 7, -12);
-    this.spill = new PointLight('#ffb25c', 1.5, 7, 1.6);
+    this.spill = new PointLight('#ffb25c', 1.5, 5.5, 1.6);
     this.spill.position.set(-0.3, 1.4, 3);
-    this.group.add(moon, rim, this.spill, new HemisphereLight('#2c3a5c', '#0d0b0a', 0.7));
+    this.group.add(moon, rim, this.spill, new HemisphereLight('#34446c', '#0d0b0a', 1.1));
   }
 
   update(dt: number): void {
@@ -282,7 +283,7 @@ export class Courtyard {
     const plaster = new MeshStandardMaterial({ normalMap: wall.normalMap, color: '#e6d8bf', roughness: 1 });
     plaster.normalScale.set(0.22, 0.22);
     const tiles = tileTexture('courtyard-tiles');
-    tiles.repeat.set(0.45, 0.45);
+    tiles.repeat.set(2, 2);
     const roofMat = new MeshStandardMaterial({ map: tiles, color: '#ffffff', roughness: 0.85 });
     for (let i = 0; i < 14; i++) {
       const a = (i / 14) * Math.PI * 2;

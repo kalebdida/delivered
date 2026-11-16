@@ -353,6 +353,8 @@
 .dl-loader__inner {
   width: min(100% - 2 * var(--pad), 34rem);
   display: grid;
+  /* One column no wider than the block, so the full-width line overflows evenly and stays centred. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.4rem;
   justify-items: center;
   text-align: center;
@@ -383,6 +385,7 @@
 }
 .dl-loader__track {
   width: 100vw;
+  margin-inline: calc(50% - 50vw);
   height: 1px;
   background: color-mix(in srgb, var(--bone) 7%, transparent);
   position: relative;
@@ -702,6 +705,15 @@ html.dl-has-cursor * {
   max-width: 22ch;
   text-wrap: balance;
   margin: 0;
+}
+.dl-end__support {
+  max-width: 44ch;
+  margin: 0;
+  opacity: 0.72;
+}
+.dl-end__support a {
+  color: var(--accent-light);
+  text-underline-offset: 3px;
 }
 .dl-end__actions {
   display: flex;

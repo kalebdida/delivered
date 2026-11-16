@@ -72,3 +72,24 @@ CH6 was checked against the new terrain and still holds at 8.
 - The figure's hands and the capsule legs still read as a mannequin up close.
 - Medium tier: a dark ellipse appears under the window in one framing (not on high).
 - Real-GPU, Firefox, Safari and Android checks; performance on a mid-range phone.
+
+
+## Final art direction (desktop 1440x900 and mobile 390x844, medium tier, SwiftShader)
+
+Captured with `scripts/shots-slow.mjs` (one virtual clock for the page). `?chapter=3&leg=rome` and
+`?chapter=3&leg=philippi` jump straight to those legs of the flight.
+
+| Frame | Before | After | What changed |
+| --- | --- | --- | --- |
+| CH3 flight · Rome leg | 7 | 8 | No boxes: every house has battered walls, a plinth, a cornice, a lower wing with a parapet and an outside stair. Arched window openings on every wall (dark recesses, or lamplit with a mullion and a little warm spill on the plaster), a doorway, plaster that differs from house to house and darkens toward the street. From the air the streets are fine-grained moonlit stone. The letter is a larger light with its own warm glow on the roofs it passes, and the camera flies closer to it. |
+| CH3 the house in Philippi | 7 | 8 | The camera starts above the eaves and cranes slowly down toward the door, so the tiled roof reads. The moon stands high in front and lights the front slope; tiles are at a human scale. |
+| CH1 ledger, desktop | 8 | 8 | unchanged |
+| CH1 ledger, mobile | 6 | 8 | Found in this pass: in portrait the scroll and the laurel sat on top of the stacked sentence and the written page was outside the frame. Portrait now has its own arrangement: the seven things in three rows under the sentence, all inside the frame. |
+
+Re-shoot log (limit: two per frame):
+- Rome: first shot had the shapes but huge cobbles and a dark frame; re-shoot 1 over-corrected to
+  black streets; re-shoot 2 is the 8 above. The walls are still pale and even under the moon.
+- Philippi: first shot the roof was an unlit black slab; re-shoot 1 lit it but the tiles were a
+  metre wide; re-shoot 2 is the 8 above. The olive tree still reads as soft lumps.
+- CH1 mobile: first shot overlapped; re-shoot 1 is the 8 above (then the laurel was moved a
+  little further in from the left edge, not re-shot).

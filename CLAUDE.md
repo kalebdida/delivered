@@ -6,6 +6,8 @@ This is Kaleb Dida's project (Kal, @kalebdida). He is the sole author and the on
 - NEVER add AI attribution anywhere. That means no `Co-Authored-By: Claude`, no `Generated with Claude Code`, no robot emoji lines, no "written by AI" notes, and no AI attribution of any kind in commit messages, PR titles or descriptions, code comments, README, docs, package.json, LICENSE, or the website itself.
 - NEVER change `git config user.name` or `git config user.email`. Commit with the identity already configured on this machine.
 - Before your first commit, run `git config user.name` and `git config user.email`. If either is empty, or shows an AI or bot identity (for example "Claude" or an anthropic.com / openai.com address), STOP and tell Kal. This is the only situation where you should stop and ask.
+- Exception: in cloud sessions where git config shows an AI identity, do NOT stop. Leave git config alone and commit with `GIT_AUTHOR_*` and `GIT_COMMITTER_*` set to Kaleb Dida and `141837645+kalebdida@users.noreply.github.com`:
+  `GIT_AUTHOR_NAME="Kaleb Dida" GIT_AUTHOR_EMAIL="141837645+kalebdida@users.noreply.github.com" GIT_COMMITTER_NAME="Kaleb Dida" GIT_COMMITTER_EMAIL="141837645+kalebdida@users.noreply.github.com" git commit ...`
 - Every package.json: `"author": "Kaleb Dida (@kalebdida)"`.
 - LICENSE: MIT, `Copyright (c) 2026 Kaleb Dida` for the code. Scripture texts stay under their own terms (see CONVENTIONS.md).
 - The site footer credits: "Made by Kaleb Dida". No AI credits.

@@ -1,0 +1,172 @@
+/* GAIN's own DOM: the threshold line, the write-your-own dialog. */
+.gn-threshold {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  padding: 0 max(24px, var(--safe-left, 0px));
+  text-align: center;
+  pointer-events: none;
+}
+.gn-threshold__line {
+  margin: 0;
+  font-style: italic;
+  font-size: clamp(30px, 4.6vw, 58px);
+  line-height: 1.2;
+  max-width: 20ch;
+  text-wrap: balance;
+  opacity: 0;
+  transform: translateY(12px);
+  filter: blur(6px);
+  transition:
+    opacity 1400ms var(--ease-out-expo, ease),
+    transform 1400ms var(--ease-out-expo, ease),
+    filter 1400ms var(--ease-out-expo, ease);
+}
+.gn-threshold.is-in .gn-threshold__line {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+.gn-blank {
+  display: inline-block;
+  color: var(--accent-light, #ffe9b0);
+  animation: gn-blink 1.6s var(--ease-breath, ease-in-out) infinite;
+}
+@keyframes gn-blink {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gn-blank { animation: none; opacity: 0.7; }
+  .gn-threshold__line { transform: none; filter: none; }
+}
+
+.gn-write-wrap {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: color-mix(in srgb, var(--ink, #07070a) 45%, transparent);
+  opacity: 0;
+  transition: opacity 420ms var(--ease-in-out-quart, ease);
+  pointer-events: auto;
+}
+.gn-write-wrap.is-in {
+  opacity: 1;
+}
+.gn-write {
+  display: grid;
+  gap: 14px;
+  width: min(420px, 100%);
+  padding: 26px 26px 22px;
+  border-radius: 18px;
+}
+.gn-write__title {
+  margin: 0;
+  font-style: italic;
+}
+.gn-write__input {
+  font: inherit;
+  font-family: var(--font-display, 'Cormorant Garamond', serif);
+  font-size: 26px;
+  font-style: italic;
+  color: var(--bone, #f7f3ea);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--bone, #f7f3ea) 30%, transparent);
+  padding: 6px 2px;
+  outline: none;
+  min-height: 44px;
+}
+.gn-write__input:focus-visible {
+  border-bottom-color: var(--gold, #f5c76b);
+  box-shadow: 0 1px 0 0 var(--gold, #f5c76b);
+}
+.gn-write__note {
+  margin: 0;
+  color: var(--mist, #8e8a93);
+}
+.gn-write__row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.gn-goon {
+  position: fixed;
+  right: max(24px, var(--safe-right, 0px));
+  bottom: max(88px, calc(var(--safe-bottom, 0px) + 88px));
+  opacity: 0;
+  transform: translateY(12px);
+  transition:
+    opacity 420ms var(--ease-out-expo, ease),
+    transform 420ms var(--ease-out-expo, ease);
+  pointer-events: auto;
+}
+.gn-goon.is-in {
+  opacity: 1;
+  transform: none;
+}
+.gn-final {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-content: end center;
+  padding-bottom: max(11vh, 72px) !important;
+  justify-items: center;
+  gap: 18px;
+  padding: 0 max(24px, var(--safe-left, 0px));
+  text-align: center;
+  pointer-events: none;
+}
+.gn-final .dl-verse {
+  margin: 0;
+  max-width: 20ch;
+  font-style: italic;
+  font-size: clamp(30px, 4.4vw, 56px);
+  line-height: 1.18;
+  text-wrap: balance;
+}
+.gn-word {
+  display: inline-block;
+  opacity: 0;
+  filter: blur(6px);
+  transform: translateY(10px);
+  transition:
+    opacity 1100ms var(--ease-out-expo, ease),
+    filter 1100ms var(--ease-out-expo, ease),
+    transform 1100ms var(--ease-out-expo, ease);
+}
+.gn-word.is-in {
+  opacity: 1;
+  filter: none;
+  transform: none;
+}
+.gn-final__line {
+  margin: 0;
+  color: var(--gold-light, #ffe9b0);
+  opacity: 0;
+  transition: opacity 1600ms var(--ease-in-out-quart, ease);
+}
+.gn-final__line.is-in {
+  opacity: 1;
+}
+.gn-final.is-out {
+  opacity: 0;
+  transition: opacity 900ms ease;
+}
+.gn-support a {
+  color: inherit;
+}
+@media (prefers-reduced-motion: reduce) {
+  .gn-word { transform: none; filter: none; }
+}
+
+/* The joystick only where the visitor walks (CH4, CH5); the action buttons stay. */
+.gn-vc-still .dl-vc__zone,
+.gn-vc-still .dl-vc__ring,
+.gn-vc-still .dl-vc__knob {
+  display: none !important;
+}

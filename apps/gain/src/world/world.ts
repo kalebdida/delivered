@@ -90,12 +90,14 @@ export class World {
   }
 
   /** Distance fog for where we are: the cell's close dark air, or the open night, map or morning. */
-  air(kind: 'cell' | 'night' | 'map' | 'morning'): void {
+  air(kind: 'cell' | 'night' | 'map' | 'flight' | 'morning'): void {
     const presets = {
       cell: { ...FOG_PRESETS.cell, density: 0.045, heightStrength: 0.4, falloff: 1.1 },
-      night: { color: '#0a0e1a', density: 0.0065, base: 0, falloff: 0.2, heightStrength: 0.25 },
+      night: { color: '#121829', density: 0.0075, base: 0, falloff: 0.2, heightStrength: 0.25 },
       map: { color: '#070a14', density: 0.0035, base: 0, falloff: 1, heightStrength: 0 },
-      morning: { color: '#eadcc2', density: 0.012, base: 0, falloff: 0.4, heightStrength: 0.2 },
+      // The letter's flight: a blue night haze that softens the far coasts into the horizon.
+      flight: { color: '#16203c', density: 0.03, base: 0, falloff: 1, heightStrength: 0 },
+      morning: { color: '#eadcc2', density: 0.02, base: 0, falloff: 0.4, heightStrength: 0.2 },
     } as const;
     this.fog.set(presets[kind]);
   }

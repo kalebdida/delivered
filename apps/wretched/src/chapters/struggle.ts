@@ -46,6 +46,8 @@ export class Wretched extends WChapter {
     this.cooldown = { strain: 0, stone: 0, run: 0, cliff: 0, outrun: 0 };
     await this.begin(ctx, { z: PATH.arena, chained: true, weight: 0.6, reveal: 0.6, posture: 1 });
     const w = this.w;
+    // Tilt down a little: the figure sits higher, clear of the whisper, with the chain below it.
+    if (innerWidth > innerHeight) ctx.rig.follow(w.figure.group, { offset: new Vector3(1.8, 3.8, 7.8), lookOffset: new Vector3(0, 0.1, -3.2), spring: 'smooth' }, true);
     w.attempts = 0;
     w.maxX = PATH.cliffX - 0.5;
     this.card({ word: 'ταλαίπωρος', lang: 'grc', translit: 'talaipōros', english: 'wretched', ref: 'Romans 7:24', number: 4 });
@@ -56,7 +58,7 @@ export class Wretched extends WChapter {
     this.breath = this.own(ctx.audio.breathing(16, { level: 0.12 }));
 
     // Stones to pick up, scattered around the arena.
-    const mat = new MeshStandardMaterial({ color: '#b5afa4', roughness: 0.95 });
+    const mat = new MeshStandardMaterial({ color: '#cfc8bb', roughness: 0.85, emissive: new Color('#3a3027'), emissiveIntensity: 1 });
     const geo = new DodecahedronGeometry(0.16, 0);
     for (const [x, dz] of [[-2.2, -1.5], [1.8, -2.6], [-1.2, 2.2], [3.5, 0.8], [-3.6, -3.8], [2.4, -5.2]] as const) {
       const mesh = new Mesh(geo, mat);

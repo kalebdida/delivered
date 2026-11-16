@@ -31,11 +31,26 @@ const ARC: Record<LedgerId, [number, number, number]> = {
   mirror: [-0.86, 1.6, -1.35],
 };
 
+/**
+ * Portrait: the same seven things in three rows under the stacked sentence, all inside the narrow
+ * frame. Each is [right of centre, height, distance from the camera] along the camera's own axes.
+ */
+const ARC_PORTRAIT: Record<LedgerId, [number, number, number]> = {
+  laurel: [-0.3, 1.38, 2.6],
+  scroll: [0.0, 1.4, 2.5],
+  mirror: [0.37, 1.36, 2.55],
+  written: [-0.27, 1.09, 2.45],
+  heart: [0.2, 1.08, 2.42],
+  coins: [-0.34, 0.82, 2.4],
+  cushion: [0.3, 0.8, 2.45],
+};
+
 const LIFE = { rise: 1.6, years: 4.6, out: 5.4, crumble: 8.4, gather: 10.2, end: 11.6 };
 
 export class LedgerChapter extends GChapter {
   readonly id = 'ledger';
   override keyMomentAt = 9;
+  private arcPortrait: boolean | null = null;
   override transitionIn = 'fade' as const;
 
   private ledger = new LedgerState();
@@ -96,6 +111,7 @@ export class LedgerChapter extends GChapter {
 
     // The things people live for, floating in the lamp's light.
     this.objects = createLedgerObjects();
+    this.arcPortrait = null;
     for (const o of this.objects) {
       o.home.fromArray(ARC[o.id]);
       o.group.position.copy(o.home);
@@ -406,6 +422,18 @@ export class LedgerChapter extends GChapter {
     w.beam.pullTarget.copy(w.figure.headPosition()).add(new Vector3(0.25, -0.2, 0.35));
     // On a narrow (portrait) screen the sentence stacks and sits in the upper third of the view.
     const portrait = cam.aspect < 0.9;
+    if (portrait !== this.arcPortrait) {
+      this.arcPortrait = portrait;
+      const f = CAM.look.clone().sub(CAM.pos).normalize();
+      const r = new Vector3().crossVectors(f, new Vector3(0, 1, 0)).normalize();
+      for (const o of this.objects) {
+        if (!portrait) o.home.fromArray(ARC[o.id]);
+        else {
+          const [a, h, d] = ARC_PORTRAIT[o.id];
+          o.home.copy(CAM.pos).addScaledVector(f, d).addScaledVector(r, a).setY(h);
+        }
+      }
+    }
     if (portrait !== this.sentence.isPortrait) this.sentence.layout(portrait);
     if (portrait) {
       const f = CAM.look.clone().sub(CAM.pos).normalize();

@@ -331,6 +331,8 @@ export class SkyColumn {
   storminess = 1;
   /** 0..1: bright midday for the playground. */
   dayMix = 0;
+  /** 0..1: the reveal. The dusk falls away to a deep night, so the column of light carries the frame. */
+  deepen = 0;
   readonly fogColor = new Color();
   private flashGlow = 0;
   weights = layerAt(COLUMN.islands);
@@ -384,22 +386,26 @@ export class SkyColumn {
     const w = (this.weights = layerAt(y));
 
     const d = this.dayMix;
-    const hex = (pick: (l: LayerName) => string, day: string) => '#' + mixColor(w, pick, _b).lerp(_a.set(day), d).getHexString();
+    const dp = this.deepen;
+    const hex = (pick: (l: LayerName) => string, day: string, deep: string) =>
+      '#' + mixColor(w, pick, _b).lerp(_a.set(day), d).lerp(_a.set(deep), dp).getHexString();
     this.sky.set({
-      zenith: hex((l) => LOOKS[l].zenith, '#3a7bd0'),
-      horizon: hex((l) => LOOKS[l].horizon, '#bcd6ef'),
-      ground: hex((l) => LOOKS[l].ground, '#f4ebdd'),
+      zenith: hex((l) => LOOKS[l].zenith, '#3a7bd0', '#080b22'),
+      horizon: hex((l) => LOOKS[l].horizon, '#bcd6ef', '#2a1d52'),
+      ground: hex((l) => LOOKS[l].ground, '#f4ebdd', '#120c26'),
       stars: 0,
       sunIntensity: mixNum(w, (l) => LOOKS[l].sunIntensity) * (1 - d) + 6 * d,
       sunGlow: 0.9 * w.heights * (1 - d) + 0.6 * d,
     });
-    this.stars.uniforms.uOpacity.value = mixNum(w, (l) => LOOKS[l].stars);
+    this.stars.uniforms.uOpacity.value = Math.min(1, mixNum(w, (l) => LOOKS[l].stars) + dp * 0.5);
     // The far cloudscape.
     const du = this.dome.uniforms;
     const cl = (pick: (c: CloudLook) => string, out: Color) => mixColor(w, (l) => pick(CLOUD_LOOKS[l]), out).lerp(_a.set(pick(DAY_CLOUDS)), d);
     cl((c) => c.lit, du.uLit.value);
     cl((c) => c.shade, du.uShade.value);
     cl((c) => c.sun, du.uSunCol.value);
+    du.uLit.value.lerp(_a.set('#2c2348'), dp);
+    du.uShade.value.lerp(_a.set('#090814'), dp);
     du.uHaze.value.copy(this.sky.horizonColor);
     const cn = (pick: (c: CloudLook) => number) => mixNum(w, (l) => pick(CLOUD_LOOKS[l])) * (1 - d) + pick(DAY_CLOUDS) * d;
     du.uSeaOp.value = cn((c) => c.sea);
@@ -411,7 +417,7 @@ export class SkyColumn {
     this.sunMesh.visible = this.sky.sunDirection.y > -0.05 && w.heights + d > 0.05;
     ((this.sunMesh.material as ShaderMaterial).uniforms.uC!.value as Color).set('#ffe2b0').multiplyScalar(2.2 * (w.heights + d));
     this.stars.uniforms.uTime.value = this.time;
-    mixColor(w, (l) => LOOKS[l].fog, this.fogColor).lerp(_a.set('#dbe6f0'), d);
+    mixColor(w, (l) => LOOKS[l].fog, this.fogColor).lerp(_a.set('#dbe6f0'), d).lerp(_a.set('#0b0a1a'), dp);
     this.fog.params.color = '#' + this.fogColor.getHexString();
     this.fog.params.density = mixNum(w, (l) => LOOKS[l].fogDensity) * this.fogScale * (1 - d * 0.5);
     this.fog.update();

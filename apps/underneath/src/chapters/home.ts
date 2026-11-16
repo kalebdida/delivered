@@ -22,6 +22,9 @@ const glowMat = (color: string, strength: number) =>
       void main(){ float edge = pow(1.0 - abs(dot(vN, vV)), 1.5); float a = (0.25 + edge) * uA * smoothstep(0.0, 0.15, vY) * smoothstep(1.0, 0.6, vY); gl_FragColor = vec4(uC * a, a); }`,
   });
 
+const HAZE = '#6a4658';
+const _deep = new Color('#33205a');
+
 export class Underneath extends UChapter {
   readonly id = 'underneath';
   override keyMomentAt = 11;
@@ -51,6 +54,9 @@ export class Underneath extends UChapter {
     this.z0 = fall ? fall.z : 0;
     this.real = 0;
     ctx.input.enabled = false;
+    // Nothing to steer here: the touch controls step aside for the image.
+    document.documentElement.classList.add('un-held');
+    this.own(() => document.documentElement.classList.remove('un-held'));
     w.camMode = 'free';
     w.platforms = [];
     w.arms.group.visible = true;
@@ -80,11 +86,12 @@ export class Underneath extends UChapter {
       a.duck(0.4, 6);
     });
     this.at(11.2, () => this.line?.sub(formatRef('Deuteronomy 33:27')));
-    this.at(17, () => {
+    // The words leave before the camera reaches the palm: the close-up is the image alone.
+    this.at(14.8, () => {
       this.line?.remove();
       this.line = null;
-      this.startReveal();
     });
+    this.at(17, () => this.startReveal());
     this.at(32, () => this.complete());
     this.own(() => {
       this.line?.remove();
@@ -95,6 +102,9 @@ export class Underneath extends UChapter {
       w.arms.uniforms.uLevel.value = 1;
       w.arms.uniforms.uGlow.value = 0;
       w.arms.uniforms.uGlowSize.value = 12;
+      w.arms.uniforms.uSculpt.value = 0;
+      w.arms.uniforms.uHaze.value.set(HAZE);
+      w.sky.deepen = 0;
       this.ghost?.geometry.dispose();
       (this.ghost?.material as ShaderMaterial | undefined)?.dispose();
       this.beam?.geometry.dispose();
@@ -127,7 +137,7 @@ export class Underneath extends UChapter {
     this.ghost.frustumCulled = false;
     this.root.add(this.ghost);
     // A faint column of warm light rising from the arms: they were beneath every layer.
-    this.beam = new Mesh(new CylinderGeometry(26, 60, 2500, 32, 1, true), glowMat('#ffd79a', 0.5));
+    this.beam = new Mesh(new CylinderGeometry(26, 60, 2500, 32, 1, true), glowMat('#ffd79a', 1.5));
     this.beam.position.set(this.cradle.x, 1250, this.cradle.z);
     (this.beam.material as ShaderMaterial).uniforms.uA!.value = 0;
     this.root.add(this.beam);
@@ -207,12 +217,13 @@ export class Underneath extends UChapter {
       // Portrait screens are narrow: stand further back so both arms still fit.
       const fit = innerWidth / Math.max(1, innerHeight) < 0.8 ? 1.75 : 1;
       const az = (0.04 + t * 0.008) / fit + e * 0.75;
-      const R = 236 * fit * Math.pow(16 / (236 * fit), e);
-      const H = 118 * fit * Math.pow(6 / (118 * fit), e);
+      const R = 236 * fit * Math.pow(9.5 / (236 * fit), e);
+      const H = 118 * fit * Math.pow(3.6 / (118 * fit), e);
       const shot = new Vector3(cr.x + Math.sin(az) * R, cr.y + H, cr.z + Math.cos(az) * R);
       const shotLook = new Vector3(cr.x, cr.y + 6 * (1 - e) + 0.6 * e, cr.z - 92 * (1 - e) - 6 * (1 - e));
       // The focal glow shrinks as the camera comes close, so the palm never washes out.
       w.arms.uniforms.uGlowSize.value = 12 * (1 - e * 0.8);
+      w.arms.uniforms.uSculpt.value = e;
       w.freePos.copy(from.lerp(shot, wideK));
       w.freeLook.copy(fromLook.lerp(shotLook, wideK));
     } else {
@@ -222,21 +233,29 @@ export class Underneath extends UChapter {
       w.sky.fogScale = 0.2 * (1 - re);
       w.sky.wispScale = 1 - re;
       arms.uLevel.value = 1 + re * 2.5;
-      const far = new Vector3(2100, 1350, 2100);
+      // The dusk falls away to deep night: the gold column, the halos and the arms carry the frame,
+      // and the one they hold is a clear warm star at its foot.
+      const night = smoothstep(17, 22.5, t);
+      w.sky.deepen = night;
+      arms.uSculpt.value = (1 - smoothstep(17, 20, t)) * 1;
+      arms.uHaze.value.set(HAZE).lerp(_deep, night);
+      arms.uGlow.value = 0.45 + re * 0.95;
+      arms.uGlowSize.value = 2.4 + re * 250;
+      const far = new Vector3(2050, 1150, 2050);
       const k15 = smoothstep(10.8, 16.4, 17);
       const e15 = k15 * k15 * (3 - 2 * k15);
       const fit = innerWidth / Math.max(1, innerHeight) < 0.8 ? 1.75 : 1;
       const az = (0.04 + 17 * 0.008) / fit + e15 * 0.75;
-      const R = 236 * fit * Math.pow(16 / (236 * fit), e15);
-      const near = new Vector3(cr.x + Math.sin(az) * R, cr.y + 118 * fit * Math.pow(6 / (118 * fit), e15), cr.z + Math.cos(az) * R);
+      const R = 236 * fit * Math.pow(9.5 / (236 * fit), e15);
+      const near = new Vector3(cr.x + Math.sin(az) * R, cr.y + 118 * fit * Math.pow(3.6 / (118 * fit), e15), cr.z + Math.cos(az) * R);
       w.freePos.copy(near.lerp(far, re));
-      w.freeLook.set(cr.x, cr.y + 3 + (1150 - cr.y) * re, cr.z - 4);
+      w.freeLook.set(cr.x, cr.y + 3 + (960 - cr.y) * re, cr.z - 4);
       if (this.ghost) {
         const g = smoothstep(19, 28, t);
         this.ghost.geometry.setDrawRange(0, Math.floor((g * this.ghostCount) / 3) * 3);
         (this.ghost.material as ShaderMaterial).uniforms.uHead!.value = g;
       }
-      if (this.beam) (this.beam.material as ShaderMaterial).uniforms.uA!.value = smoothstep(21, 28, t) * 0.35;
+      if (this.beam) (this.beam.material as ShaderMaterial).uniforms.uA!.value = smoothstep(20, 27, t) * 0.5;
       // Each halo lights as the ghost of the fall passes down through its layer.
       const head = COLUMN.fallStart - smoothstep(19, 28, t) * (COLUMN.fallStart - this.cradle.y);
       for (const hl of this.halos) (hl.mesh.material as ShaderMaterial).uniforms.uA!.value = smoothstep(hl.y + 60, hl.y - 60, head) * (0.55 + 0.45 * smoothstep(26, 30, t));

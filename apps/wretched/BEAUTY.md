@@ -39,3 +39,25 @@ The earlier "missing verse" frames came from this, not from the chapters.
 Still open: CH0 has no visible figure at its key moment (the start of the path is unlit). On
 CH6 the gold reads in the sparks but not yet in the links themselves, so it stays below the 9
 target. Both need another round of shots.
+
+
+## Final art direction (desktop 1440x900 and mobile 390x844, medium tier, SwiftShader)
+
+Captured with `scripts/shots-slow.mjs` (one virtual clock for the page, so verses hold).
+
+| Shot | Before | Problem | Fix | Final |
+| --- | --- | --- | --- | --- |
+| CH0 threshold, desktop | 7 | no figure behind the verse; in this pass's captures the frame was fully black | The black frame was a core bug, not the lighting: the chapter's instant fade to black became NaN on the first zero-length frame and never lifted (fixed in `postfx.ts`). Then: a faint warm key from above the left shoulder and a low kicker ahead, and a camera further back and tilted up, so the hooded figure stands in a pool of light under the verse with the far light above it. | 8 |
+| CH6 deliverance, desktop | 8 | the gold read in the sparks, not in the links | The links are gold metal now (albedo and roughness turn with the light, a deeper gold kept under the clipping point so it stays gold and not white), each swells as it turns and holds its gold about 3 s before it lets go, each carries a soft halo, and a gold light travels down the chain. At the strike the camera comes down to the ground beside the chain: the gold links fill the foreground, the kneeling figure and the beam behind them, the cross above; then it rises again for the double. The iridescent attractors are hidden in this chapter. | 9 |
+| CH6 deliverance, mobile | 9 | the new low shot cropped the figure and lost the cross in portrait | Portrait keeps its tall framing (no low shot), with the figure brought in from the corner: figure, beam and cross in one column. The touch controls sit over the lower part of the figure. | 8.5 |
+| Visitor figure | n/a | a lit clay face inside the hood; a boxy waist | the hood opens onto shadow (as in the other rooms); the mantle falls into the skirt | n/a |
+
+Re-shoot log (limit: two per frame):
+- CH0 desktop: first shot black (the NaN fade); re-shoot 1 the figure stood behind the verse and
+  was lit too flat; re-shoot 2 is the 8 above. The far light sits behind the end of the reference
+  line, which costs it a little contrast.
+- CH6 desktop: first shot too pale and the links too small to read; re-shoot 1 reframed wider
+  with a deeper gold, links still tiny; re-shoot 2 is the low shot, the 9 above. The nearest
+  links run out of the left edge of the frame.
+- CH6 mobile: first shot cropped (the low camera in portrait); re-shoot 1 back to the tall
+  framing with the figure in the corner; re-shoot 2 moves the figure in from the corner.

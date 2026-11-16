@@ -1,5 +1,5 @@
 // CH0 threshold · CH1 θέλω · CH2 οὐ … ποιῶ · CH3 νόμος
-import { Color, Vector3 } from 'three';
+import { Color, PointLight, SpotLight, Vector3 } from 'three';
 import { partial, clamp, damp, smoothstep, type DroneHandle } from '@delivered/core';
 import { PATH } from '../world/layout';
 import type { WretchedCtx } from '../world/world';
@@ -20,7 +20,22 @@ export class Threshold extends WChapter {
     void this.w.loadPhysics();
     this.w.movable = false;
     ctx.postfx.fadeTo('black', 1, 0);
-    follow(ctx, 'low', true);
+    // The figure stands low in the frame, its hood just under the verse, facing the far light.
+    const wide = innerWidth > innerHeight;
+    ctx.rig.follow(
+      this.w.figure.group,
+      { offset: wide ? new Vector3(0.7, 1.5, 7.6) : new Vector3(0.3, 1.7, 8.2), lookOffset: new Vector3(0, wide ? 3.0 : 2.7, -1.5), spring: 'heavy' },
+      true,
+    );
+    // A faint key from above the left shoulder and a low warm kicker ahead: enough to draw the hood,
+    // the mantle and a pool of ground out of the dark behind the words. Not enough to compete with them.
+    const at = this.w.figure.position;
+    const key = new SpotLight('#FFD9A0', 24, 12, 0.62, 1, 1.4);
+    key.position.set(at.x - 2.4, at.y + 4.2, at.z + 2.6);
+    key.target.position.set(at.x, at.y + 0.9, at.z);
+    const kick = new PointLight('#FFC98A', 4, 6, 1.6);
+    kick.position.set(at.x + 0.9, at.y + 1.3, at.z - 2.2);
+    this.root.add(key, key.target, kick);
     const ref = 'Romans 7:24';
     this.at(0.8, () => void ctx.ui.scripture.show({ ref, text: partial(ref, 0), align: 'center', hideRef: true, duration: 4.2 }));
     this.at(5.6, () =>

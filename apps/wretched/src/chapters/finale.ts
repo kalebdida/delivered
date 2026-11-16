@@ -1,5 +1,5 @@
 // CH6 εὐχαριστῶ (deliverance from outside) · CH7 οὐδὲν … κατάκριμα (no condemnation)
-import { AdditiveBlending, Color, Group, Mesh, PlaneGeometry, ShaderMaterial, Vector3 } from 'three';
+import { AdditiveBlending, Color, Group, Mesh, PlaneGeometry, PointLight, ShaderMaterial, Vector3 } from 'three';
 import { partial, LightShaft, damp, flashLimiter, glsl, graceFilter, haptic, lerp, smoothstep, type DroneHandle } from '@delivered/core';
 import { LINKS } from '../world/chain';
 import { PATH } from '../world/layout';
@@ -52,6 +52,8 @@ export class Thanks extends WChapter {
   private stand = 0;
   private dissolving = false;
   private start = new Vector3();
+  /** The gold of the chain, cast on the ground and the figure as it runs down the links. */
+  private chainLight = new PointLight('#F2A93C', 0, 6, 1.5);
 
   async enter(ctx: WretchedCtx): Promise<void> {
     this.crossLevel = this.seamLevel = this.beamLevel = 0;
@@ -81,10 +83,21 @@ export class Thanks extends WChapter {
     this.cross.add(vertical, horizontal);
     this.cross.position.set(0, 170, z);
     this.beam = this.own(new LightShaft({ color: '#FFE9B0', length: 10, radiusTop: 0.5, radiusBottom: 0.9, intensity: 0, motes: 160, seed: 'deliver' }));
-    this.root.add(this.seam, this.cross, this.beam.group);
+    this.chainLight.intensity = 0;
+    this.root.add(this.seam, this.cross, this.beam.group, this.chainLight);
     this.pad = this.own(ctx.audio.drone(130.8, 'choir', { level: 0 }));
-    ctx.rig.follow(w.figure.group, { offset: new Vector3(2.2, 1.5, 6.8), lookOffset: new Vector3(0, 6, -12), spring: 'heavy' }, true);
-    ctx.rig.setFov(64, 6);
+    // Back and a little above: the chain lies on the ground between the camera and the kneeling
+    // figure, so its links turning to gold are in the frame with the beam and the cross.
+    // Portrait keeps its own taller framing: figure, beam and cross stacked in one column.
+    const wide = innerWidth > innerHeight;
+    const view = wide
+      ? { offset: new Vector3(2.5, 2.5, 9.4), lookOffset: new Vector3(0, 5.4, -12), spring: 'heavy' as const }
+      : { offset: new Vector3(0.9, 1.9, 7.8), lookOffset: new Vector3(0, 6, -12), spring: 'heavy' as const };
+    ctx.rig.follow(w.figure.group, view, true);
+    ctx.rig.setFov(wide ? 68 : 64, 6);
+    // Nothing tempts here: the attractors leave the frame to the light.
+    w.attractors.group.visible = false;
+    this.own(() => (w.attractors.group.visible = true));
     this.own(() => ctx.rig.setFov(45, 2));
 
     // ---- the timeline (see PLAN.md) ----
@@ -101,6 +114,24 @@ export class Thanks extends WChapter {
       ctx.audio.bell(1046.5, { level: 0.5 });
     });
     this.at(7, () => this.strike());
+    // The camera comes down to the ground beside the chain: the links turning to gold fill the
+    // foreground, the kneeling figure and the beam behind them, the cross above. Then it rises again.
+    this.at(7.25, () => {
+      if (!wide) return;
+      const a = w.figure.ankle(new Vector3());
+      const d = w.chain.linkPosition(LINKS - 1, new Vector3());
+      const dir = d.clone().sub(a).setY(0);
+      if (dir.lengthSq() < 0.04) dir.set(0, 0, 1);
+      dir.normalize();
+      const side = new Vector3(dir.z, 0, -dir.x);
+      if (side.x < 0) side.negate();
+      const mid = a.clone().lerp(d, 0.5);
+      const cam = mid.clone().addScaledVector(side, 1.55).addScaledVector(dir, 1.25);
+      cam.y = heightAt(cam.x, cam.z) + 0.42;
+      const look = a.clone().addScaledVector(dir, -3).setY(a.y + 1.7);
+      ctx.rig.playPath([cam], { duration: 1.5, lookAt: look, ease: 'power2.inOut' });
+    });
+    this.at(11.6, () => wide && ctx.rig.follow(w.figure.group, view));
     for (let i = 1; i < LINKS; i++) this.at(7.5 + i * 0.32, () => this.goldLink(i));
     this.at(12, () => {
       this.dissolving = true;
@@ -140,7 +171,7 @@ export class Thanks extends WChapter {
     haptic([20, 40, 20]);
     w.chain.gold[0] = 1;
     // Colour returns first where the light touches: enough saturation for the gold to read.
-    ctx.postfx.params.saturation = 0.75;
+    ctx.postfx.params.saturation = 0.92;
     w.detach();
     this.freed = true;
     w.chain.releaseEnd();
@@ -188,10 +219,24 @@ export class Thanks extends WChapter {
     // Gold links fade away one by one, as dust.
     for (let i = 0; i < LINKS; i++) {
       if (w.chain.gold[i]! > 0) {
-        w.chain.gone[i] = Math.min(1, w.chain.gone[i]! + dt * 0.22);
+        // Each link holds its gold for a few seconds before it lets go.
+        if (w.chain.goldAge[i]! > 3.2) w.chain.gone[i] = Math.min(1, w.chain.gone[i]! + dt * 0.26);
         if (Math.random() < dt * 8 && w.chain.gone[i]! < 1) w.sparks.emit(w.chain.linkPosition(i, new Vector3()), 2, GOLD, { speed: 0.3, up: 0.6, life: 2 });
       }
     }
+
+    // The chain's own gold light: at the centre of the links that are gold right now.
+    const mid = new Vector3();
+    const link = new Vector3();
+    let lit = 0;
+    for (let i = 0; i < LINKS; i++) {
+      const g = w.chain.gold[i]! * (1 - w.chain.gone[i]!);
+      if (g <= 0) continue;
+      mid.addScaledVector(w.chain.linkPosition(i, link), g);
+      lit += g;
+    }
+    if (lit > 0) this.chainLight.position.copy(mid.multiplyScalar(1 / lit)).setY(mid.y + 0.45);
+    this.chainLight.intensity = damp(this.chainLight.intensity, w.chain.mesh.visible ? Math.min(lit, 6) * 2.4 : 0, 4, dt);
 
     // The double stands, faces the light, its eyes go out, and the wind carries it off as ash.
     if (this.dissolving) {

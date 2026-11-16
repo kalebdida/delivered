@@ -105,7 +105,9 @@ export class Figure {
     torso.castShadow = true;
     this.chest.add(torso, this.head);
     this.head.position.y = 0.66;
-    const skull = new Mesh(new SphereGeometry(0.115, 24, 18), m);
+    // Inside the hood there is only shadow: no face, in any room.
+    const shade = new MeshStandardMaterial({ color: '#1c1714', roughness: 1 });
+    const skull = new Mesh(new SphereGeometry(0.115, 24, 18), shade);
     skull.scale.set(0.92, 1.1, 1);
     skull.position.y = 0.06;
     skull.castShadow = true;
@@ -122,10 +124,10 @@ export class Figure {
       mesh.castShadow = true;
       return mesh;
     };
-    const mantle = lathe([[0.07, 0.64], [0.15, 0.6], [0.25, 0.53], [0.29, 0.42], [0.27, 0.22], [0.23, 0.02], [0.22, -0.06]]);
+    const mantle = lathe([[0.07, 0.64], [0.15, 0.6], [0.25, 0.53], [0.295, 0.42], [0.29, 0.22], [0.28, 0.02], [0.285, -0.08]]);
     mantle.scale.set(1, 1, 0.78);
     this.chest.add(mantle);
-    const skirt = lathe([[0.2, 0.02], [0.23, -0.12], [0.28, -0.32], [0.33, -0.52], [0.36, -0.66]]);
+    const skirt = lathe([[0.24, 0.04], [0.27, -0.12], [0.3, -0.32], [0.34, -0.52], [0.37, -0.66]]);
     skirt.scale.set(1, 1, 0.92);
     this.hips.add(skirt);
     // Hood: a sphere opened toward the face (+z), drawn back into a soft point behind the head.

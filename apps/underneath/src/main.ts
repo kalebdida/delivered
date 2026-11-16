@@ -1,6 +1,6 @@
 import '@delivered/core/styles.css';
 import './underneath.css';
-import { createApp, createPostcard, getLanguage, h, markComplete, registerScripture, sharePostcard, t, toast, webChapterUrl } from '@delivered/core';
+import { createApp, createPostcard, getLanguage, markComplete, registerScripture, sharePostcard, t, toast, webChapterUrl } from '@delivered/core';
 import { Threshold, Lean, GiveWay } from './chapters/heights';
 import { Fall, Rider, resetFall } from './chapters/fall';
 import { Underneath, Dwelling } from './chapters/home';
@@ -66,15 +66,6 @@ async function showEnd(): Promise<void> {
         toast(t('core.postcard.failed'));
       }
     },
-  });
-  // The quiet support line from the hub (the core end card has no slot for it yet).
-  requestAnimationFrame(() => {
-    const end = document.querySelector('.dl-end');
-    if (end && !end.querySelector('.un-support')) {
-      end.append(
-        h('p', { class: 'dl-caption un-support dl-rise', style: '--i:12' }, t('core.support') + ' ', h('a', { href: 'https://findahelpline.com', target: '_blank', rel: 'noopener noreferrer' }, 'findahelpline.com')),
-      );
-    }
   });
   await shown;
 }

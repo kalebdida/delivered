@@ -90,9 +90,9 @@ export class LoadingScreen {
   /**
    * Complete the bar, respect the minimum display time, then fade out.
    * With `begin: true` a Begin button appears and the promise resolves when it is pressed
-   * (use this to unlock audio with a real gesture).
+   * (use this to unlock audio with a real gesture). `onLeave` fires as the fade-out starts.
    */
-  async finish(opts: { begin?: boolean; beginLabel?: string } = {}): Promise<void> {
+  async finish(opts: { begin?: boolean; beginLabel?: string; onLeave?: () => void } = {}): Promise<void> {
     this.setProgress(1);
     const elapsed = performance.now() - this.start;
     await wait(Math.max(this.minTime - elapsed, 0) + 450);
@@ -106,6 +106,8 @@ export class LoadingScreen {
       });
     }
     this.el.classList.add('is-done');
+    // The scene comes up while the loader fades, so there is never a held blank frame between them.
+    opts.onLeave?.();
     await wait(950);
     this.dispose();
   }

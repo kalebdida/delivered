@@ -1,14 +1,16 @@
 // The visible chain: a Verlet rope (core) drawn as 14 heavy iron links in one InstancedMesh.
 // Links can glow red-hot (struck) or turn to gold and dissolve (deliverance).
 import {
-  Color, DynamicDrawUsage, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshStandardMaterial, Quaternion, TorusGeometry, Vector3,
+  AdditiveBlending, BufferAttribute, BufferGeometry, Color, DynamicDrawUsage, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshStandardMaterial,
+  Points, Quaternion, ShaderMaterial, TorusGeometry, Vector3,
 } from 'three';
 import { createRope, type Verlet } from '@delivered/core';
 import { PATH } from './layout';
 
 export const LINKS = 14;
 const HOT = new Color('#ff4a1a').multiplyScalar(3.2);
-const GOLD = new Color('#F5C76B').multiplyScalar(2.6);
+// Deeper than the UI gold and only a little over 1.0: brighter would clip to bone and read as white.
+const GOLD = new Color('#F2A93C').multiplyScalar(2.3);
 
 export class Chain {
   readonly rope: Verlet;
@@ -20,6 +22,12 @@ export class Chain {
   /** Per link: gold 0..1, then dissolve 0..1 (scale to nothing). */
   readonly gold = new Float32Array(LINKS);
   readonly gone = new Float32Array(LINKS);
+  /** Per link: seconds since it turned to gold (it holds its gold before it dissolves). */
+  readonly goldAge = new Float32Array(LINKS);
+  /** A soft gold halo on every gold link, so the chain itself is the brightest thing on the ground. */
+  private readonly halo: Points;
+  private readonly haloPos: BufferAttribute;
+  private readonly haloGlow: BufferAttribute;
   private readonly m = new Matrix4();
   private readonly q = new Quaternion();
   private readonly q2 = new Quaternion();
@@ -53,9 +61,38 @@ export class Chain {
         .replace('#include <begin_vertex>', '#include <begin_vertex>\nvEmit = aEmit;');
       shader.fragmentShader = shader.fragmentShader
         .replace('#include <common>', '#include <common>\nvarying vec3 vEmit;')
-        .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += vEmit;');
+        // Gold is the metal itself, not a glow laid over iron: the albedo turns with the light.
+        .replace('#include <color_fragment>', '#include <color_fragment>\nfloat chainGold = smoothstep(0.15, 0.8, vEmit.g);\ndiffuseColor.rgb = mix(diffuseColor.rgb, vec3(1.0, 0.66, 0.2), chainGold);')
+        .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix(roughnessFactor, 0.2, chainGold);')
+        .replace(
+          '#include <emissivemap_fragment>',
+          `#include <emissivemap_fragment>
+          float chainFacing = clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0);
+          totalEmissiveRadiance += vEmit * mix(1.0, 0.55 + 0.9 * chainFacing, chainGold);`,
+        );
     };
-    this.material.customProgramCacheKey = () => 'wretched-chain';
+    this.material.customProgramCacheKey = () => 'wretched-chain-2';
+    const hg = new BufferGeometry();
+    this.haloPos = new BufferAttribute(new Float32Array(LINKS * 3), 3).setUsage(DynamicDrawUsage);
+    this.haloGlow = new BufferAttribute(new Float32Array(LINKS), 1).setUsage(DynamicDrawUsage);
+    hg.setAttribute('position', this.haloPos);
+    hg.setAttribute('aGlow', this.haloGlow);
+    this.halo = new Points(
+      hg,
+      new ShaderMaterial({
+        transparent: true,
+        depthWrite: false,
+        blending: AdditiveBlending,
+        vertexShader: `attribute float aGlow; varying float vGlow;
+          void main(){ vGlow = aGlow; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_PointSize = aGlow * 300.0 / max(0.5, -mv.z); gl_Position = projectionMatrix * mv; }`,
+        fragmentShader: `varying float vGlow;
+          void main(){ float d = length(gl_PointCoord - 0.5) * 2.0; float a = (exp(-d * 5.0) * 0.9 + exp(-d * 14.0) * 1.4) * smoothstep(1.0, 0.6, d) * min(vGlow, 1.0);
+          gl_FragColor = vec4(vec3(1.0, 0.58, 0.14) * a * 1.25, a); }`,
+      }),
+    );
+    this.halo.frustumCulled = false;
+    this.halo.renderOrder = 8;
+    this.mesh.add(this.halo);
   }
 
   /** Lay the chain straight between two points (teleports). */
@@ -98,17 +135,24 @@ export class Chain {
       this.q2.setFromAxisAngle(UP, i % 2 ? Math.PI / 2 : 0);
       this.q.multiply(this.q2);
       const g = this.gone[i]!;
-      const sc = Math.max(0.0001, 1 - g);
+      const gd = this.gold[i]!;
+      if (gd > 0) this.goldAge[i] = this.goldAge[i]! + dt;
+      // A link swells a little as it turns (a breath of light), then shrinks to nothing.
+      const swell = 1 + gd * (0.38 + 0.3 * Math.exp(-this.goldAge[i]! * 2.5));
+      const sc = Math.max(0.0001, (1 - g) * swell);
       this.s.set(sc, sc, sc);
       this.m.compose(this.a.add(this.b).multiplyScalar(0.5), this.q, this.s);
       this.mesh.setMatrixAt(i, this.m);
+      this.haloPos.setXYZ(i, this.a.x, this.a.y, this.a.z);
+      this.haloGlow.setX(i, gd * (1 - g) * (1 + 0.8 * Math.exp(-this.goldAge[i]! * 2)));
       const h = this.heat[i]!;
-      const gd = this.gold[i]!;
       this.c.setRGB(0, 0, 0).lerp(HOT, h * h).lerp(GOLD, gd);
       this.emit.setXYZ(i, this.c.r, this.c.g, this.c.b);
     }
     this.mesh.instanceMatrix.needsUpdate = true;
     this.emit.needsUpdate = true;
+    this.haloPos.needsUpdate = true;
+    this.haloGlow.needsUpdate = true;
   }
 
   /** World position of a link's centre. */
@@ -129,11 +173,14 @@ export class Chain {
     this.heat.fill(0);
     this.gold.fill(0);
     this.gone.fill(0);
+    this.goldAge.fill(0);
     this.rope.pin(0);
     this.rope.pin(LINKS);
   }
 
   dispose(): void {
+    this.halo.geometry.dispose();
+    (this.halo.material as ShaderMaterial).dispose();
     this.mesh.geometry.dispose();
     this.material.dispose();
     this.rope.dispose();

@@ -29,6 +29,8 @@ export abstract class UChapter extends Chapter<UnderCtx> {
     ctx.input.clearFilters();
     ctx.input.enabled = true;
     ctx.rig.follow(null);
+    ctx.world.lookLift = 0;
+    ctx.world.lookSide = 0;
     ctx.input.setVirtualButtons(buttons);
     this.own(() => {
       ctx.ui.hud.clear();

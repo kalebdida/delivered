@@ -48,7 +48,8 @@ class Grabbable {
     } else if (kind === 'island') {
       this.group.add(islandUnderside(2, 7, m.rock));
     } else {
-      const kite = new Mesh(new PlaneGeometry(1.8, 2.6), new MeshStandardMaterial({ color: '#d9a441', roughness: 0.6, side: DoubleSide, emissive: new Color('#5a2a10'), emissiveIntensity: 0.3 }));
+      // Backlit fabric: it glows warm even from the shadowed side.
+      const kite = new Mesh(new PlaneGeometry(1.8, 2.6), new MeshStandardMaterial({ color: '#e0a848', roughness: 0.6, side: DoubleSide, emissive: new Color('#a85a22'), emissiveIntensity: 0.85 }));
       kite.rotation.z = Math.PI / 4;
       this.group.add(kite);
     }
@@ -210,7 +211,7 @@ class FallRunner {
     this.heart.setLevel(Math.min(0.9, lw.fog * 0.9 + lw.night * 0.2), 0.5);
     this.heart.setBpm(Math.round(118 - lookUp * 40));
     if (lw.storm > 0.3) ctx.rig.addTrauma(dt * 0.6 * lw.storm * (1 - lookUp * 0.8));
-    v.glowLevel = 1 + lw.night * 1.6 + lw.fog * 0.4;
+    v.glowLevel = 1 + lw.storm * 0.8 + lw.night * 1.6 + lw.fog * 0.4;
     // The arms are only seen at the bottom of the world.
     w.arms.uniforms.uLevel.value = 1 - Math.min(1, Math.max(0, (fall.y - 150) / 180));
 
@@ -275,6 +276,8 @@ export class Fall extends FallChapter {
   private lookHeld = 0;
   private whispered = 0;
   private spawns: [number, GrabKind][] = [];
+  /** Screenshot hook: one strike timed to the key moment (`?shot`, never on a normal visit). */
+  private shotStrike = new URLSearchParams(location.search).has('shot') ? 0 : -1;
 
   enter(ctx: UnderCtx): void {
     resetFall(ctx);
@@ -295,6 +298,10 @@ export class Fall extends FallChapter {
     const { ctx } = this;
     const fall = this.runner.fall;
     this.runEvents();
+    if (this.shotStrike === 0 && this.time > this.keyMomentAt - 0.15) {
+      this.shotStrike = 1;
+      this.w.sky.lightning.soon = true;
+    }
     const tumble = Math.max(0, 1 - this.time / 2.2);
     this.runner.step(dt, tumble);
     while (this.spawns.length && fall.y < this.spawns[0]![0]) this.runner.spawn(this.spawns.shift()![1], this.root);
@@ -311,7 +318,7 @@ export class Fall extends FallChapter {
 
 export class Rider extends FallChapter {
   readonly id = 'rider';
-  override keyMomentAt = 7;
+  override keyMomentAt = 13;
   override transitionIn = 'cut' as const;
   private close = 0;
   private wasUp = false;
@@ -356,7 +363,8 @@ export class Rider extends FallChapter {
     const r = w.rider.group;
     const d = 900 * Math.pow(1 - this.close, 1.3) + 40;
     if (this.pass < 0) {
-      r.position.set(fall.x + Math.sin(this.time * 0.3) * 18 * (1 - this.close) + 10, fall.y + d, fall.z - 12);
+      // Up along the line the look-up camera sees: far above and ahead, closing in.
+      r.position.set(fall.x + Math.sin(this.time * 0.3) * 18 * (1 - this.close) + 0.16 * d + 6, fall.y + d, fall.z - 0.62 * d - 8);
       if (fall.y < 640) {
         this.pass = 0;
         this.passFrom.copy(r.position);

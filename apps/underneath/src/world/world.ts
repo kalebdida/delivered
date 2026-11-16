@@ -7,7 +7,7 @@ import { Visitor, type Platform } from './visitor';
 import { Arms, ARM_COUNTS } from './arms';
 import { Rider } from './rider';
 import { COLUMN } from './layers';
-import { MATERIALS, type Mats } from './islands';
+import { GRASS, MATERIALS, type Mats } from './islands';
 
 export interface UnderCtx extends CoreContext {
   world: World;
@@ -40,6 +40,9 @@ export class World {
   readonly freePos = new Vector3();
   readonly freeLook = new Vector3();
   camDistance = 1;
+  /** Ground camera framing: raise the look point (more sky) and shift it right (figure on the left third). */
+  lookLift = 0;
+  lookSide = 0;
   /** Record of the fall path for the reveal. */
   readonly path: Vector3[] = [];
   easyIslands = false;
@@ -53,7 +56,7 @@ export class World {
     ctx.engine.camera.updateProjectionMatrix();
     this.sky = new SkyColumn(ctx);
     const tier = ctx.quality.tier;
-    this.arms = new Arms({ count: ARM_COUNTS[tier], scale: 700, ribbons: tier === 'low' ? 8 : 16 });
+    this.arms = new Arms({ count: ARM_COUNTS[tier], scale: 700, ribbons: tier === 'low' ? 10 : tier === 'medium' ? 18 : 26, around: tier === 'low' ? 20 : tier === 'medium' ? 28 : 40, floor: true });
     this.arms.group.position.set(0, 0, 0);
     this.rider = new Rider(tier === 'low' ? 1500 : tier === 'medium' ? 4000 : 9000);
     this.rider.level = 0;
@@ -104,11 +107,16 @@ export class World {
     const { ctx, visitor } = this;
     const real = ctx.loop.timeScale > 0 ? dt / ctx.loop.timeScale : dt;
     visitor.update(dt);
+    GRASS.uTime.value += dt;
     const pr = ctx.engine.renderer.getPixelRatio();
     this.arms.update(dt, pr);
     this.rider.update(dt, pr);
     this.updateCamera(Math.min(real, 0.1));
     this.sky.update(dt, ctx.engine.camera, visitor.group.position);
+    // The rider parts the storm on the far cloud walls.
+    const du = this.sky.dome.uniforms;
+    du.uRider.value = this.rider.group.visible ? Math.min(1, this.rider.level) : 0;
+    du.uRiderDir.value.copy(this.rider.group.position).sub(ctx.engine.camera.position).normalize();
   }
 
   private updateCamera(dt: number): void {
@@ -124,13 +132,16 @@ export class World {
       this.yaw -= input.filtered.lookX * dt * 2.2;
       const d = (tall ? 8.6 : 6.8) * this.camDistance;
       this.camGoal.set(Math.sin(this.yaw) * d, (tall ? 3.6 : 2.7) * this.camDistance, Math.cos(this.yaw) * d);
-      this.lookGoal.set(-Math.sin(this.yaw) * 2.5, 1.3, -Math.cos(this.yaw) * 2.5);
+      const side = this.lookSide * (tall ? 0.6 : 1);
+      this.lookGoal.set(-Math.sin(this.yaw) * 2.5 + Math.cos(this.yaw) * side, 1.3 + this.lookLift, -Math.cos(this.yaw) * 2.5 - Math.sin(this.yaw) * side);
     } else {
       this.lookUp = damp(this.lookUp, this.lookingUp ? 1 : 0, 3.2, dt);
       const u = this.lookUp;
       // Down: above and behind, looking into the depths. Up: below, looking past the visitor at the sky.
-      this.camGoal.set(0, 5.5 - u * 8.5, 2.4 + u * 3.6).multiplyScalar(tall ? 1.2 : 1);
-      this.lookGoal.set(0, -20 + u * 40, -6 - u * 8);
+      // Looking up the camera drops below and to the side, so the figure reads in profile against
+      // the sky and the rider is high in the frame.
+      this.camGoal.set(u * 5.2, 5.5 - u * 8.4, 2.4 + u * 2.6).multiplyScalar(tall ? 1.2 : 1);
+      this.lookGoal.set(-u * 3.5, -20 + u * 44, -6 - u * 14);
     }
     const k = this.camMode === 'fall' ? 4 : 5;
     this.camOff.set(damp(this.camOff.x, this.camGoal.x, k, dt), damp(this.camOff.y, this.camGoal.y, k, dt), damp(this.camOff.z, this.camGoal.z, k, dt));

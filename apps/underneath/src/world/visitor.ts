@@ -6,6 +6,39 @@ import {
   SphereGeometry, Vector3,
 } from 'three';
 import { createCloth, damp, type Verlet } from '@delivered/core';
+import type { Material } from 'three';
+
+/**
+ * A fresnel rim on the side facing a light behind the figure (the low sun, lightning, the arms
+ * below), so the small figure always separates from the sky. Shared by every visitor material.
+ */
+export const RIM = {
+  uRimColor: { value: new Color('#ffd08a') },
+  uRim: { value: 1.2 },
+  /** Direction toward the rim light, in view space (set per frame). */
+  uRimDir: { value: new Vector3(0, 0, -1) },
+};
+function withRim<M extends Material>(m: M): M {
+  m.onBeforeCompile = (sh) => {
+    Object.assign(sh.uniforms, RIM);
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform vec3 uRimColor; uniform float uRim; uniform vec3 uRimDir;')
+      .replace(
+        '#include <emissivemap_fragment>',
+        `#include <emissivemap_fragment>
+        {
+          vec3 vv = normalize(vViewPosition);
+          float fr = pow(1.0 - clamp(abs(dot(normal, vv)), 0.0, 1.0), 1.5);
+          float side = clamp(dot(normal, uRimDir) * 0.9 + 0.4, 0.0, 1.0);
+          totalEmissiveRadiance += uRimColor * fr * side * uRim;
+          // A little self-light so the figure never turns into a black hole on its shadowed side.
+          totalEmissiveRadiance += diffuseColor.rgb * 0.16;
+        }`,
+      );
+  };
+  m.customProgramCacheKey = () => 'underneath-rim';
+  return m;
+}
 
 export interface Platform {
   x: number;
@@ -219,24 +252,28 @@ export class Visitor {
   readonly velocity = new Vector3();
 
   constructor() {
-    const cloth = new MeshStandardMaterial({ color: '#2b3566', roughness: 0.8, side: DoubleSide, emissive: new Color('#141a3a'), emissiveIntensity: 0.4 });
-    const skin = new MeshStandardMaterial({ color: '#efe3d0', roughness: 0.6, emissive: new Color('#f5c76b'), emissiveIntensity: 0.12 });
-    const dark = new MeshStandardMaterial({ color: '#2a2440', roughness: 0.85 });
+    // A dusk-blue cloak: the complement of the gold, never a black hole against the sun.
+    const cloth = withRim(new MeshStandardMaterial({ color: '#646d98', roughness: 0.7, side: DoubleSide, emissive: new Color('#36385e'), emissiveIntensity: 0.75 }));
+    const skin = withRim(new MeshStandardMaterial({ color: '#efe3d0', roughness: 0.6, emissive: new Color('#f5c76b'), emissiveIntensity: 0.12 }));
 
     const torso = new Mesh(new CapsuleGeometry(0.2, 0.5, 4, 12), cloth);
     torso.position.y = 0.95;
     const head = new Mesh(new SphereGeometry(0.17, 20, 14), skin);
     head.position.y = 1.5;
+    // The hood: the cloak drawn up over the head, open at the face.
+    const hood = new Mesh(new SphereGeometry(0.205, 24, 16, Math.PI / 2 + 0.75, Math.PI * 2 - 1.5, 0, Math.PI * 0.74), cloth);
+    hood.position.set(0, 1.51, -0.02);
+    hood.scale.set(1, 1.1, 1.06);
     this.coreMat = new MeshStandardMaterial({ color: '#000000', emissive: new Color('#ffd58a'), emissiveIntensity: 3.2 });
     this.core = new Mesh(new SphereGeometry(0.07, 12, 8), this.coreMat);
     this.core.position.set(0, 1.08, 0.17);
     for (const side of [-1, 1]) {
-      const leg = new Mesh(new CapsuleGeometry(0.075, 0.5, 3, 8), dark);
+      const leg = new Mesh(new CapsuleGeometry(0.075, 0.5, 3, 8), cloth);
       leg.position.set(side * 0.1, 0.36, 0);
       this.legs.push(leg);
       this.body.add(leg);
     }
-    this.body.add(torso, head, this.core);
+    this.body.add(torso, head, hood, this.core);
     this.glow = new PointLight('#ffd9a0', 2.2, 7, 1.6);
     this.glow.position.set(0, 1.1, 0.4);
     this.body.add(this.glow);
@@ -244,12 +281,24 @@ export class Visitor {
     // Cloak: pinned along the shoulders, simulated in the body's frame.
     this.cloth = createCloth([-0.34, 1.36, -0.16], 0.68, 1.15, CLOAK_COLS, CLOAK_ROWS, { iterations: 6, damping: 0.97 });
     for (let c = 0; c <= CLOAK_COLS; c++) this.cloth.pin(c);
-    // Curve the top row around the neck.
-    for (let c = 0; c <= CLOAK_COLS; c++) {
-      const u = c / CLOAK_COLS - 0.5;
-      const p = this.cloth.getPoint(c);
-      this.cloth.pin(c, [p[0], p[1] - Math.abs(u) * 0.08, -0.16 + Math.cos(u * Math.PI) * 0.12 - 0.02]);
+    // Shape it: an A-line that wraps around the back and shoulders (narrow at the neck, full at the
+    // hem), with the rest lengths taken from that shape so it keeps its fall while it moves.
+    for (let r = 0; r <= CLOAK_ROWS; r++) {
+      const v = r / CLOAK_ROWS;
+      const w = 0.5 + 0.5 * v;
+      const span = 2.5 - 0.5 * v;
+      const R = w / span;
+      for (let c = 0; c <= CLOAK_COLS; c++) {
+        const th = (c / CLOAK_COLS - 0.5) * span;
+        this.cloth.setPoint(r * (CLOAK_COLS + 1) + c, R * Math.sin(th), 1.38 - v * 1.12, -0.21 + R * (1 - Math.cos(th)) - 0.02 * v);
+      }
     }
+    for (const k of this.cloth.constraints) {
+      const a = this.cloth.getPoint(k.a);
+      const b = this.cloth.getPoint(k.b);
+      k.rest = Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+    }
+    for (let c = 0; c <= CLOAK_COLS; c++) this.cloth.pin(c, this.cloth.getPoint(c));
     this.cloth.wind = () => this.windLocal;
     this.cloakGeo = new BufferGeometry();
     this.cloakGeo.setAttribute('position', new BufferAttribute(this.cloth.positions, 3));
@@ -306,10 +355,19 @@ export class Visitor {
     this.cloth.gravity = [g.x, g.y, g.z];
     const steps = Math.min(4, Math.max(1, Math.round(dt / (1 / 60))));
     for (let i = 0; i < steps; i++) this.cloth.step(Math.min(dt, 1 / 30) / steps);
-    // Keep the cloak behind the body plane so it never clips through the chest.
+    // Keep the cloak out of the body (a capsule around the torso), so it never clips through.
     const p = this.cloth.positions;
-    for (let i = 0; i < this.cloth.count; i++) {
-      if (p[i * 3 + 2]! > -0.14 + (i < CLOAK_COLS + 1 ? 0.3 : 0) && Math.abs(p[i * 3]!) < 0.24 && p[i * 3 + 1]! > 0.3 && p[i * 3 + 1]! < 1.35) p[i * 3 + 2] = -0.14;
+    for (let i = CLOAK_COLS + 1; i < this.cloth.count; i++) {
+      const y = p[i * 3 + 1]!;
+      if (y < 0.3 || y > 1.4) continue;
+      const x = p[i * 3]!;
+      const z = p[i * 3 + 2]!;
+      const d = Math.hypot(x, z + 0.02);
+      if (d < 0.235) {
+        const k = 0.235 / Math.max(d, 1e-4);
+        p[i * 3] = x * k;
+        p[i * 3 + 2] = (z + 0.02) * k - 0.02;
+      }
     }
     (this.cloakGeo.attributes.position as BufferAttribute).needsUpdate = true;
     this.cloakGeo.computeVertexNormals();

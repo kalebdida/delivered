@@ -11,6 +11,7 @@ import { CatchSystem, type CatchPlan } from '../world/play';
 import { islandDetail, islandTop, islandUnderside } from '../world/islands';
 import type { Platform } from '../world/visitor';
 import type { UnderCtx } from '../world/world';
+import { SUN } from '../world/sky';
 
 const Y = 2400;
 const PENTA = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66];
@@ -76,7 +77,7 @@ export class Playground extends UChapter {
     w.sky.lookAltitude = 2470;
     this.own(() => {
       w.sky.dayMix = 0;
-      w.sky.sky.setSun(7, 2.4);
+      w.sky.sky.setSun(SUN.elevation, SUN.azimuth);
       w.sky.lookAltitude = null;
     });
 
@@ -86,17 +87,19 @@ export class Playground extends UChapter {
     base.add(islandTop(8, 51, m.grass), islandUnderside(7.6, 51, m.rock), islandDetail(7.2, 52, m));
     this.root.add(base);
     this.home = { x: 0, z: 0, y: Y, r: 8, ledge: true };
-    const cloudMat = new MeshStandardMaterial({ color: '#fbf6ee', roughness: 1, emissive: new Color('#ffe9c8'), emissiveIntensity: 0.25 });
+    // Cloud ledges: soft, lumpy, lit white with cool sky light in the shadows.
+    const cloudMat = new MeshStandardMaterial({ color: '#ffffff', roughness: 1, emissive: new Color('#d6e2f4'), emissiveIntensity: 0.42 });
     const rng = seededRandom('ledges');
     for (const [x, y, z] of [[19, Y - 1.5, -5], [-18, Y + 1, -9], [3, Y - 3, -21]] as const) {
       const g = new Group();
       g.position.set(x, y, z);
-      for (let i = 0; i < 9; i++) {
-        const s = new Mesh(new SphereGeometry(0.9 + rng() * 0.9, 16, 12), cloudMat);
+      for (let i = 0; i < 16; i++) {
+        const s = new Mesh(new SphereGeometry(0.7 + rng() * 1.1, 20, 14), cloudMat);
         const a = rng() * Math.PI * 2;
-        const r = rng() * 2;
-        s.position.set(Math.cos(a) * r, -0.6 - rng() * 0.5, Math.sin(a) * r);
-        s.scale.y = 0.6;
+        const r = 0.6 + rng() * 2.3;
+        s.position.set(Math.cos(a) * r, -0.5 - rng() * 0.9 + (r < 1.6 ? 0.25 : 0), Math.sin(a) * r);
+        s.scale.set(1, 0.62 + rng() * 0.2, 1);
+        s.receiveShadow = true;
         g.add(s);
       }
       const top = new Mesh(new CylinderGeometry(2.6, 2.4, 0.4, 28), cloudMat);
@@ -129,16 +132,23 @@ export class Playground extends UChapter {
     });
     this.own(this.slideMat);
 
+    // Midday: a clean, bright grade instead of the golden one.
+    ctx.postfx.setLUT({ shadows: '#2c3c6e', highlights: '#fff6e2', tintStrength: 0.2, contrast: 1.07, saturation: 1.16, gamma: 1.0 });
+    this.own(() => w.sky.setGrade('heights'));
     w.camMode = 'ground';
-    w.camDistance = 1.25;
-    w.yaw = Math.PI + 0.35;
+    w.camDistance = 1.35;
+    w.lookLift = 1.6;
+    // Portrait is narrow: lean the frame toward the swing instead of past it.
+    const tall = innerWidth / Math.max(1, innerHeight) < 0.8;
+    w.lookSide = tall ? -1.6 : 1.2;
+    w.yaw = Math.PI - 0.15;
     w.visitor.fallPose = 0;
     w.visitor.lean = 0;
     w.visitor.glowLevel = 1;
     w.visitor.body.rotation.set(0, 0, 0);
-    w.visitor.motion.teleport(0.5, Y, -1.5, this.home);
+    w.visitor.motion.teleport(0.5, Y, 1.2, this.home);
     w.visitor.group.position.copy(w.visitor.motion.pos);
-    w.visitor.heading = 0.35;
+    w.visitor.heading = -0.15;
     w.visitor.settle();
     w.snapCamera();
     w.lets = 0;
@@ -174,8 +184,10 @@ export class Playground extends UChapter {
       const pivot = new Vector3(2.4, Y + 6.2, 8.6);
       const L = 5.2;
       const arch = add(new Mesh(new TorusGeometry(1.5, 0.06, 8, 40, Math.PI), light));
+      // The arch faces the ledge as one soft arc over the swing (seen edge-on against the beam it
+      // would read as a cross, which this room never uses as decoration).
       arch.position.set(pivot.x, Y + 4.7, 7.2);
-      arch.rotation.y = Math.PI / 2;
+      arch.rotation.y = 0;
       arch.scale.set(1, 1, 1);
       const beam = add(new Mesh(new CylinderGeometry(0.07, 0.07, 1.6, 8), light));
       beam.rotation.z = Math.PI / 2;
@@ -474,11 +486,11 @@ export class Playground extends UChapter {
     const vp = v.group.position;
     const falling = this.released && !this.plan;
     const gx = falling || this.plan ? vp.x : 0;
-    const gz = falling || this.plan ? vp.z - 14 * 0.1 : 0;
+    const gz = falling || this.plan ? vp.z - 14 * this.catcher.cradle.z : 0;
     const cg = this.catcher.group.position;
     cg.x = damp(cg.x, gx, 4, dt);
     cg.z = damp(cg.z, gz, 4, dt);
-    const meet = this.plan ? this.catchY - 0.7 - 14 * 0.05 : falling ? Math.max(this.sys.meetY - 6, Math.min(vp.y - 10, this.sys.meetY - 1)) : Y - 40;
+    const meet = this.plan ? this.catchY - 0.7 - 14 * this.catcher.cradle.y : falling ? Math.max(this.sys.meetY - 6, Math.min(vp.y - 10, this.sys.meetY - 1)) : Y - 40;
     cg.y = damp(cg.y, meet, this.plan || falling ? 3 : 1.2, dt);
     cu.uLevel.value = damp(cu.uLevel.value, falling || this.plan ? 1.6 : 0, 2.5, dt);
     cu.uClose.value = damp(cu.uClose.value, this.plan && this.catchT > 0.3 ? 1 : 0, 3, dt);

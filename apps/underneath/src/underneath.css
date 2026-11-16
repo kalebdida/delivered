@@ -10,6 +10,23 @@
   pointer-events: none;
   transition: opacity 900ms var(--ease-in-out-quart, ease);
 }
+/* The scrim stays local to the words (the line itself covers the whole screen). */
+.un-line.dl-scrim::before {
+  content: none;
+}
+.un-line > p {
+  position: relative;
+  isolation: isolate;
+}
+.un-line > p::before {
+  content: '';
+  position: absolute;
+  inset: -1.4em -2.6em;
+  z-index: -1;
+  background: radial-gradient(closest-side, var(--scrim), color-mix(in srgb, var(--ink) 30%, transparent) 60%, transparent);
+  filter: blur(18px);
+  pointer-events: none;
+}
 .un-line.is-out {
   opacity: 0;
 }

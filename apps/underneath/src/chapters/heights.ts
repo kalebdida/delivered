@@ -1,9 +1,10 @@
 // CH0 threshold · CH1 אֵין כָּאֵל (lean) · CH2 the ground gives way
-import { BoxGeometry, Group, Mesh, Vector3 } from 'three';
-import { Dust, Physics, createCrumble, prefersReducedMotion, type Crumble, type WindHandle } from '@delivered/core';
+import { Group, Mesh, Vector3 } from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { Dust, Physics, createCrumble, prefersReducedMotion, smoothstep, type Crumble, type WindHandle } from '@delivered/core';
 import { UChapter, WordLine } from './base';
 import { COLUMN } from '../world/layers';
-import { SCULPTURES, Sculpture, islandDetail, islandUnderside, makeIsland } from '../world/islands';
+import { SCULPTURES, Sculpture, chunkGeometry, clipToCircle, islandDetail, islandUnderside, makeIsland } from '../world/islands';
 import type { Platform } from '../world/visitor';
 import type { UnderCtx } from '../world/world';
 
@@ -47,6 +48,8 @@ export class Threshold extends UChapter {
 // ---------------------------------------------------------------------------------------------
 
 const HOME_R = 6.5;
+/** The CH1 opening frame (ground camera framing). */
+const OPEN = { distance: 2.0, lift: 2.6, side: 2.4 };
 const ISLE_R = 2.6;
 const ISLE_D = 13.5;
 
@@ -59,7 +62,6 @@ function buildHeights(ctx: UnderCtx, root: Group): { platforms: Platform[]; scul
   root.add(home);
   const platforms: Platform[] = [{ x: 0, z: 0, y, r: HOME_R, ledge: true }];
   const sculptures: Sculpture[] = [];
-  const plank = new BoxGeometry(1.5, 0.32, 1);
   SCULPTURES.forEach((kind, i) => {
     const a = (i / 6) * Math.PI * 2 + Math.PI / 6 + Math.PI / 2;
     const x = Math.cos(a) * ISLE_D;
@@ -77,8 +79,7 @@ function buildHeights(ctx: UnderCtx, root: Group): { platforms: Platform[]; scul
     // A stone bridge from home to the island.
     const mid = (HOME_R + ISLE_D - ISLE_R) / 2;
     const len = ISLE_D - ISLE_R - HOME_R + 1.2;
-    const bridge = new Mesh(plank, mats.stone);
-    bridge.scale.set(1, 1, len);
+    const bridge = new Mesh(new RoundedBoxGeometry(1.5, 0.3, len, 3, 0.12), mats.bridge);
     bridge.position.set(Math.cos(a) * mid, y - 0.16, Math.sin(a) * mid);
     bridge.rotation.y = Math.PI / 2 - a;
     bridge.castShadow = bridge.receiveShadow = true;
@@ -100,6 +101,7 @@ export class Lean extends UChapter {
   private hinted = false;
   private dust!: Dust;
   private birds = 2;
+  private settle = -1;
 
   enter(ctx: UnderCtx): void {
     this.begin(ctx, [
@@ -111,11 +113,16 @@ export class Lean extends UChapter {
     this.sculptures = built.sculptures;
     w.platforms = built.platforms;
     w.camMode = 'ground';
-    w.camDistance = 1;
-    w.yaw = 0.35;
+    // The opening frame: wide, low sun ahead and to the right, the figure on the left third. It
+    // settles into the play camera when the visitor first moves (or after a few seconds).
+    w.camDistance = OPEN.distance;
+    w.lookLift = OPEN.lift;
+    w.lookSide = OPEN.side;
+    w.yaw = 0;
+    this.settle = -1;
     w.visitor.fallPose = 0;
     w.visitor.lean = 0;
-    w.visitor.motion.teleport(0, COLUMN.islands, 2.5, w.platforms[0]!);
+    w.visitor.motion.teleport(0.4, COLUMN.islands, 0.6, w.platforms[0]!);
     w.visitor.group.position.copy(w.visitor.motion.pos);
     w.visitor.heading = Math.PI;
     w.visitor.settle();
@@ -129,12 +136,14 @@ export class Lean extends UChapter {
     this.dust.points.position.set(0, COLUMN.islands + 3, 0);
     this.root.add(this.dust.points);
     this.own(this.dust as unknown as { dispose(): void });
+    ctx.postfx.setGodRays(w.sky.sunMesh, { density: 0.94, weight: 0.42, decay: 0.94, exposure: 0.55 });
+    this.own(() => ctx.postfx.setGodRays(null));
 
     const { audio } = ctx;
     this.own(audio.wind(0.18, { level: 0.5 }));
     this.own(audio.drone(110, 'warm', { level: 0.18 }));
     this.card({ word: 'אֵין כָּאֵל', lang: 'he', translit: "ein ka'el", english: 'there is no one like God', ref: 'Deuteronomy 33:26', number: 1 });
-    this.at(5.5, () => ctx.ui.whisper.show(ctx.t('underneath.move'), { duration: 6 }));
+    this.at(8, () => ctx.ui.whisper.show(ctx.t('underneath.move'), { duration: 6 }));
   }
 
   update(dt: number): void {
@@ -142,6 +151,16 @@ export class Lean extends UChapter {
     const w = this.w;
     this.runEvents();
     this.dust.update(dt);
+    // The opening frame eases into the play camera.
+    const f = this.ctx.input.filtered;
+    if (this.settle < 0 && (Math.hypot(f.moveX, f.moveY) > 0.2 || Math.abs(f.lookX) > 0.2 || this.time > 10)) this.settle = 0;
+    if (this.settle >= 0 && this.settle < 3.5) {
+      this.settle += dt;
+      const k = smoothstep(0, 3.2, this.settle);
+      w.camDistance = OPEN.distance + (1.1 - OPEN.distance) * k;
+      w.lookLift = OPEN.lift * (1 - k) + 0.3 * k;
+      w.lookSide = OPEN.side * (1 - k);
+    }
     this.birds -= dt;
     if (this.birds < 0) {
       this.birds = 5 + Math.random() * 7;
@@ -299,8 +318,21 @@ export class GiveWay extends UChapter {
     this.isles = COURSE.map((c, i) => {
       const y = y0 - i * 0.5;
       const slab = createCrumble(this.physics!, { position: { x: c.x, y: y - 0.25, z: c.z }, width: c.r * 2, depth: c.r * 2, thickness: 0.5, chunks: i === 0 ? per + 6 : per, material: w.mats.turf, seed: 'isle' + i, solid: false });
-      // Round the slab: chunks outside the circle are not part of the island.
-      for (const ch of slab.chunks) if (Math.hypot(ch.centre[0], ch.centre[1]) > c.r * 0.92) ch.mesh.visible = false;
+      // Round the slab: every chunk is redrawn as its piece of the round island (clipped to the
+      // circle, bevelled, grass on top); chunks wholly outside the circle are not part of it.
+      for (const ch of slab.chunks) {
+        const hull = ch.mesh.userData.hull as Float32Array;
+        const poly: [number, number][] = [];
+        for (let k = 0; k < hull.length; k += 6) poly.push([hull[k]!, hull[k + 2]!]);
+        const piece = clipToCircle(poly, -ch.centre[0], -ch.centre[1], c.r * 0.97);
+        if (piece.length < 3) {
+          ch.mesh.visible = false;
+          continue;
+        }
+        ch.mesh.geometry.dispose();
+        ch.mesh.geometry = chunkGeometry(piece, 0.5, i * 7.3);
+        ch.mesh.material = w.mats.grass;
+      }
       this.root.add(slab.group);
       const under = islandUnderside(c.r * 0.95, 20 + i, w.mats.rock);
       under.position.set(c.x, y, c.z);
@@ -348,6 +380,8 @@ export class GiveWay extends UChapter {
     };
     this.own(() => (w.visitor.motion.onLand = null));
 
+    ctx.postfx.setGodRays(w.sky.sunMesh, { density: 0.94, weight: 0.4, decay: 0.94, exposure: 0.5 });
+    this.own(() => ctx.postfx.setGodRays(null));
     this.wind = this.own(ctx.audio.wind(0.25, { level: 0.6 }));
     this.card({ word: 'יְשֻׁרוּן', lang: 'he', translit: 'Yeshurun', english: 'upright one', ref: 'Deuteronomy 33:26', number: 2 });
     // The home island begins to crack on its own.

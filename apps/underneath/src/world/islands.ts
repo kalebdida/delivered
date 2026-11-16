@@ -8,12 +8,78 @@ import { createNoise, seededRandom } from '@delivered/core';
 
 const noise = createNoise('islands');
 
+/** Shared clock for the grass sway (World advances it). */
+export const GRASS = { uTime: { value: 0 } };
+
+let tuftGeo: BufferGeometry | null = null;
+/** A tuft of three curved blades, dark at the root and gold at the tip. */
+function grassTuft(): BufferGeometry {
+  if (tuftGeo) return tuftGeo;
+  const pos: number[] = [];
+  const col: number[] = [];
+  const idx: number[] = [];
+  const root = new Color('#7f8a3c');
+  const tip = new Color('#f4e092');
+  const c = new Color();
+  for (let b = 0; b < 3; b++) {
+    const a = (b / 3) * Math.PI * 2 + 0.4;
+    const h = 0.22 + b * 0.05;
+    const lean = 0.07 + b * 0.03;
+    const base = pos.length / 3;
+    for (let k = 0; k <= 3; k++) {
+      const v = k / 3;
+      const w = 0.04 * (1 - v * 0.92);
+      const out = lean * v * v;
+      const cx = Math.cos(a) * out;
+      const cz = Math.sin(a) * out;
+      const sx = -Math.sin(a) * w;
+      const sz = Math.cos(a) * w;
+      pos.push(cx - sx, h * v, cz - sz, cx + sx, h * v, cz + sz);
+      c.copy(root).lerp(tip, Math.pow(v, 0.8));
+      col.push(c.r, c.g, c.b, c.r, c.g, c.b);
+      if (k < 3) {
+        const i = base + k * 2;
+        idx.push(i, i + 1, i + 2, i + 1, i + 3, i + 2);
+      }
+    }
+  }
+  tuftGeo = new BufferGeometry();
+  tuftGeo.setAttribute('position', new BufferAttribute(new Float32Array(pos), 3));
+  tuftGeo.setAttribute('color', new BufferAttribute(new Float32Array(col), 3));
+  tuftGeo.setIndex(idx);
+  tuftGeo.computeVertexNormals();
+  return tuftGeo;
+}
+
+let grassMat: MeshStandardMaterial | null = null;
+function grassMaterial(): MeshStandardMaterial {
+  if (grassMat) return grassMat;
+  // Emissive warmth stands in for the light coming through backlit blades.
+  grassMat = new MeshStandardMaterial({ color: '#ffffff', vertexColors: true, roughness: 0.85, side: DoubleSide, emissive: new Color('#7a5c1c'), emissiveIntensity: 0.55 });
+  grassMat.onBeforeCompile = (sh) => {
+    Object.assign(sh.uniforms, GRASS);
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uTime;').replace(
+      '#include <begin_vertex>',
+      `#include <begin_vertex>
+      #ifdef USE_INSTANCING
+        float ph = instanceMatrix[3].x * 0.9 + instanceMatrix[3].z * 0.7;
+        float sway = sin(uTime * 1.6 + ph) * 0.7 + sin(uTime * 2.9 + ph * 1.7) * 0.3;
+        transformed.x += sway * 0.07 * position.y * position.y / 0.12;
+        transformed.z += sway * 0.035 * position.y * position.y / 0.12;
+      #endif`,
+    );
+  };
+  grassMat.customProgramCacheKey = () => 'underneath-grass';
+  return grassMat;
+}
+
 export const MATERIALS = () => ({
   grass: new MeshStandardMaterial({ color: '#ffffff', roughness: 0.95, vertexColors: true }),
   turf: new MeshStandardMaterial({ color: '#c2b874', roughness: 0.95 }),
   rock: new MeshStandardMaterial({ color: '#ffffff', roughness: 0.92, vertexColors: true, flatShading: true }),
   gold: new MeshStandardMaterial({ color: '#f5c76b', metalness: 0.85, roughness: 0.28, emissive: new Color('#5a3a10'), emissiveIntensity: 0.25 }),
-  stone: new MeshStandardMaterial({ color: '#e6dccb', roughness: 0.75 }),
+  stone: new MeshStandardMaterial({ color: '#d9cbb3', roughness: 0.8 }),
+  bridge: new MeshStandardMaterial({ color: '#b7a184', roughness: 0.92 }),
   dark: new MeshStandardMaterial({ color: '#5b4a52', roughness: 0.8 }),
   cloth: new MeshStandardMaterial({ color: '#7a2e3a', roughness: 0.7 }),
 });
@@ -80,17 +146,15 @@ export function islandTop(radius: number, seed: number, mat: Material): Mesh {
 export function islandDetail(radius: number, seed: number, mats: Mats): Group {
   const g = new Group();
   const rng = seededRandom(seed);
-  const tuft = new ConeGeometry(0.05, 0.32, 4);
-  tuft.translate(0, 0.16, 0);
-  const n = Math.round(radius * radius * 3);
-  const tufts = new InstancedMesh(tuft, new MeshStandardMaterial({ color: '#c7c27a', roughness: 1 }), n);
+  const n = Math.round(radius * radius * 8);
+  const tufts = new InstancedMesh(grassTuft(), grassMaterial(), n);
   const o = new Object3D();
   for (let i = 0; i < n; i++) {
     const a = rng() * Math.PI * 2;
     const r = Math.sqrt(rng()) * radius * 0.92;
     o.position.set(Math.cos(a) * r, 0, Math.sin(a) * r);
-    o.rotation.set((rng() - 0.5) * 0.4, rng() * 6, (rng() - 0.5) * 0.4);
-    o.scale.setScalar(0.6 + rng() * 0.9);
+    o.rotation.set((rng() - 0.5) * 0.3, rng() * 6, (rng() - 0.5) * 0.3);
+    o.scale.setScalar(0.55 + rng() * 0.8);
     o.updateMatrix();
     tufts.setMatrixAt(i, o.matrix);
   }
@@ -333,4 +397,115 @@ export class Sculpture {
       }
     });
   }
+}
+
+// ---------------------------------------------------------------------------------------------
+// CH2's crumbling slabs: the core cuts them into Voronoi chunks; each chunk is redrawn here as a
+// piece of a round island (clipped to the circle), with a grassy bevelled top and earthy sides.
+
+type P2 = [number, number];
+
+function clipHalf(poly: P2[], nx: number, nz: number, d: number): P2[] {
+  const out: P2[] = [];
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i]!;
+    const b = poly[(i + 1) % poly.length]!;
+    const da = a[0] * nx + a[1] * nz - d;
+    const db = b[0] * nx + b[1] * nz - d;
+    if (da <= 0) out.push(a);
+    if ((da < 0 && db > 0) || (da > 0 && db < 0)) {
+      const t = da / (da - db);
+      out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]);
+    }
+  }
+  return out;
+}
+
+/** Clip a convex polygon to a circle (centre `cx, cz`, radius `r`), approximated by 28 tangents. */
+export function clipToCircle(poly: P2[], cx: number, cz: number, r: number): P2[] {
+  let p = poly;
+  for (let k = 0; k < 28 && p.length >= 3; k++) {
+    const a = (k / 28) * Math.PI * 2;
+    const nx = Math.cos(a);
+    const nz = Math.sin(a);
+    p = clipHalf(p, nx, nz, r + cx * nx + cz * nz);
+  }
+  return p;
+}
+
+/** A bevelled, grass-topped chunk from a convex polygon (local XZ, centred), `thickness` tall. */
+export function chunkGeometry(poly: P2[], thickness: number, seed: number): BufferGeometry {
+  const h = thickness / 2;
+  const bevel = Math.min(0.09, thickness * 0.2);
+  let cx = 0;
+  let cz = 0;
+  for (const p of poly) {
+    cx += p[0] / poly.length;
+    cz += p[1] / poly.length;
+  }
+  const inset = poly.map(([x, z]) => {
+    const dx = x - cx;
+    const dz = z - cz;
+    const l = Math.hypot(dx, dz) || 1;
+    const k = Math.max(0, l - bevel) / l;
+    return [cx + dx * k, cz + dz * k] as P2;
+  });
+  const pos: number[] = [];
+  const col: number[] = [];
+  const c = new Color();
+  const grassA = new Color('#b3b36a');
+  const grassB = new Color('#d9c47c');
+  const soilTop = new Color('#a48a66');
+  const soilLow = new Color('#7a6150');
+  const up = new Vector3();
+  const tri = (a: number[], b: number[], cc: number[], ca: Color, cb: Color, ccol: Color, want: Vector3) => {
+    const e1 = new Vector3(b[0]! - a[0]!, b[1]! - a[1]!, b[2]! - a[2]!);
+    const e2 = new Vector3(cc[0]! - a[0]!, cc[1]! - a[1]!, cc[2]! - a[2]!);
+    const flip = e1.cross(e2).dot(want) < 0;
+    const vs = flip ? [a, cc, b] : [a, b, cc];
+    const cs = flip ? [ca, ccol, cb] : [ca, cb, ccol];
+    vs.forEach((v, i) => {
+      pos.push(v[0]!, v[1]!, v[2]!);
+      col.push(cs[i]!.r, cs[i]!.g, cs[i]!.b);
+    });
+  };
+  const grassAt = (x: number, z: number) => c.copy(grassA).lerp(grassB, 0.5 + 0.5 * noise.noise2(x * 0.5 + seed, z * 0.5)).clone();
+  // Top.
+  for (let i = 1; i < inset.length - 1; i++) {
+    const a = inset[0]!;
+    const b = inset[i]!;
+    const d = inset[i + 1]!;
+    tri([a[0], h, a[1]], [b[0], h, b[1]], [d[0], h, d[1]], grassAt(a[0], a[1]), grassAt(b[0], b[1]), grassAt(d[0], d[1]), up.set(0, 1, 0));
+  }
+  // Bevel and sides.
+  const n = poly.length;
+  for (let i = 0; i < n; i++) {
+    const a = poly[i]!;
+    const b = poly[(i + 1) % n]!;
+    const ia = inset[i]!;
+    const ib = inset[(i + 1) % n]!;
+    const out = new Vector3(b[1] - a[1], 0, -(b[0] - a[0])).normalize();
+    if (out.x * (a[0] - cx) + out.z * (a[1] - cz) < 0) out.negate();
+    const yb = h - bevel;
+    const g1 = grassAt(ia[0], ia[1]);
+    const g2 = grassAt(ib[0], ib[1]);
+    const edge = c.copy(grassA).lerp(soilTop, 0.55).clone();
+    const want = out.clone().add(new Vector3(0, 1, 0)).normalize();
+    tri([ia[0], h, ia[1]], [a[0], yb, a[1]], [b[0], yb, b[1]], g1, edge, edge, want);
+    tri([ia[0], h, ia[1]], [b[0], yb, b[1]], [ib[0], h, ib[1]], g1, edge, g2, want);
+    tri([a[0], yb, a[1]], [a[0], -h, a[1]], [b[0], -h, b[1]], soilTop, soilLow, soilLow, out);
+    tri([a[0], yb, a[1]], [b[0], -h, b[1]], [b[0], yb, b[1]], soilTop, soilLow, soilTop, out);
+  }
+  // Bottom.
+  for (let i = 1; i < n - 1; i++) {
+    const a = poly[0]!;
+    const b = poly[i]!;
+    const d = poly[i + 1]!;
+    tri([a[0], -h, a[1]], [b[0], -h, b[1]], [d[0], -h, d[1]], soilLow, soilLow, soilLow, up.set(0, -1, 0));
+  }
+  const g = new BufferGeometry();
+  g.setAttribute('position', new BufferAttribute(new Float32Array(pos), 3));
+  g.setAttribute('color', new BufferAttribute(new Float32Array(col), 3));
+  g.computeVertexNormals();
+  return g;
 }

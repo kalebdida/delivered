@@ -1,6 +1,6 @@
 // The rider of the heavens: a moving storm of white-gold light tearing down through the clouds.
 // No face, no body: a blazing core, a spiralling comet of light, and a wake.
-import { AdditiveBlending, BufferAttribute, BufferGeometry, Color, Group, Mesh, PlaneGeometry, Points, ShaderMaterial } from 'three';
+import { AdditiveBlending, BufferAttribute, BufferGeometry, Color, DoubleSide, Group, Mesh, PlaneGeometry, Points, ShaderMaterial } from 'three';
 import { seededRandom } from '@delivered/core';
 
 export class Rider {
@@ -8,6 +8,8 @@ export class Rider {
   readonly uniforms = { uTime: { value: 0 }, uLevel: { value: 0 }, uLen: { value: 140 }, uPixel: { value: 1 }, uColor: { value: new Color('#fff4da') }, uGold: { value: new Color('#f5c76b') } };
   private readonly trail: Points;
   private readonly core: Mesh;
+  private readonly streaks = new Group();
+  private readonly streakMat: ShaderMaterial;
 
   constructor(count: number) {
     const rng = seededRandom('rider');
@@ -50,7 +52,7 @@ export class Rider {
       transparent: true,
       depthWrite: false,
       blending: AdditiveBlending,
-      vertexShader: /* glsl */ `varying vec2 vUv; void main(){ vUv = uv; vec4 mv = modelViewMatrix * vec4(0.0,0.0,0.0,1.0); mv.xy += position.xy * vec2(30.0, 60.0); gl_Position = projectionMatrix * mv; }`,
+      vertexShader: /* glsl */ `varying vec2 vUv; void main(){ vUv = uv; vec4 mv = modelViewMatrix * vec4(0.0,0.0,0.0,1.0); mv.xy += position.xy * vec2(44.0, 80.0); gl_Position = projectionMatrix * mv; }`,
       fragmentShader: /* glsl */ `uniform float uLevel; uniform float uTime; uniform vec3 uColor; varying vec2 vUv;
         void main(){
           vec2 p = (vUv - 0.5) * vec2(1.0, 2.0);
@@ -61,7 +63,37 @@ export class Rider {
     });
     this.core = new Mesh(new PlaneGeometry(1, 1), coreMat);
     this.core.frustumCulled = false;
-    this.group.add(this.trail, this.core);
+    // Long streaks of light fanned around the line of flight: the comet's structure and its wake.
+    this.streakMat = new ShaderMaterial({
+      uniforms: this.uniforms,
+      transparent: true,
+      depthWrite: false,
+      side: DoubleSide,
+      blending: AdditiveBlending,
+      vertexShader: /* glsl */ `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+      fragmentShader: /* glsl */ `uniform float uLevel; uniform float uTime; uniform vec3 uColor; uniform vec3 uGold; varying vec2 vUv;
+        void main(){
+          float x = abs(vUv.x - 0.5) * 2.0;
+          float along = vUv.y;
+          float body = pow(1.0 - along, 1.6) * smoothstep(0.0, 0.03, along);
+          float edge = exp(-x * x * 9.0);
+          float pulse = 0.75 + 0.25 * sin(along * 30.0 - uTime * 14.0);
+          float a = body * edge * pulse * uLevel * 0.55;
+          gl_FragColor = vec4(mix(uColor * 2.2, uGold * 1.4, along) * a, a);
+        }`,
+    });
+    const rng2 = seededRandom('streaks');
+    for (let i = 0; i < 7; i++) {
+      const len = 160 + rng2() * 120;
+      const geo = new PlaneGeometry(10 + rng2() * 14, len);
+      geo.translate(0, len / 2, 0);
+      const m = new Mesh(geo, this.streakMat);
+      m.rotation.y = (i / 7) * Math.PI;
+      m.rotation.z = (rng2() - 0.5) * 0.12;
+      m.frustumCulled = false;
+      this.streaks.add(m);
+    }
+    this.group.add(this.streaks, this.trail, this.core);
   }
 
   set level(v: number) {
@@ -75,6 +107,7 @@ export class Rider {
   update(dt: number, pixelRatio: number): void {
     this.uniforms.uTime.value += dt;
     this.uniforms.uPixel.value = pixelRatio;
+    this.streaks.rotation.y += dt * 0.8;
   }
 
   dispose(): void {
@@ -82,6 +115,8 @@ export class Rider {
     (this.trail.material as ShaderMaterial).dispose();
     this.core.geometry.dispose();
     (this.core.material as ShaderMaterial).dispose();
+    this.streaks.children.forEach((m) => (m as Mesh).geometry.dispose());
+    this.streakMat.dispose();
     this.group.removeFromParent();
   }
 }

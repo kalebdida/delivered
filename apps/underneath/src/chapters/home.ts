@@ -3,6 +3,7 @@ import {
   AdditiveBlending, BoxGeometry, BufferAttribute, BufferGeometry, CatmullRomCurve3, Color, CylinderGeometry, DoubleSide, Group, Mesh, MeshStandardMaterial,
   PlaneGeometry, PointLight, Points, ShaderMaterial, SphereGeometry, TorusGeometry, TubeGeometry, Vector3,
 } from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { createCloth, damp, formatRef, partial, smoothstep, type HeartbeatHandle, type Verlet } from '@delivered/core';
 import { UChapter, WordLine } from './base';
 import { getFall } from './fall';
@@ -23,7 +24,7 @@ const glowMat = (color: string, strength: number) =>
 
 export class Underneath extends UChapter {
   readonly id = 'underneath';
-  override keyMomentAt = 9;
+  override keyMomentAt = 11;
   override transitionIn = 'cut' as const;
   private y0 = 200;
   private v0 = 25;
@@ -35,6 +36,8 @@ export class Underneath extends UChapter {
   private ghost: Mesh | null = null;
   private ghostCount = 0;
   private beam: Mesh | null = null;
+  /** Halos where the column crosses each layer: the arms were beneath every one of them. */
+  private halos: { mesh: Mesh; y: number }[] = [];
   private readonly camFrom = new Vector3();
   private readonly cradle = new Vector3();
 
@@ -56,7 +59,7 @@ export class Underneath extends UChapter {
     w.arms.uniforms.uRise.value = 0;
     w.arms.uniforms.uLevel.value = 1;
     w.arms.cradleWorld(this.cradle);
-    this.cradle.y += 1.5;
+    this.cradle.y += 1.1;
     w.visitor.group.position.set(this.x0, this.y0, this.z0);
     w.visitor.settle();
     this.camFrom.set(this.x0, this.y0 + 6.5, this.z0 + 4.2);
@@ -77,12 +80,12 @@ export class Underneath extends UChapter {
       a.duck(0.4, 6);
     });
     this.at(11.2, () => this.line?.sub(formatRef('Deuteronomy 33:27')));
-    this.at(15, () => {
+    this.at(17, () => {
       this.line?.remove();
       this.line = null;
       this.startReveal();
     });
-    this.at(30, () => this.complete());
+    this.at(32, () => this.complete());
     this.own(() => {
       this.line?.remove();
       ctx.loop.timeScale = 1;
@@ -94,6 +97,7 @@ export class Underneath extends UChapter {
       this.ghost?.geometry.dispose();
       (this.ghost?.material as ShaderMaterial | undefined)?.dispose();
       this.beam?.geometry.dispose();
+      this.halos = [];
       (this.beam?.material as ShaderMaterial | undefined)?.dispose();
     });
   }
@@ -126,6 +130,25 @@ export class Underneath extends UChapter {
     this.beam.position.set(this.cradle.x, 1250, this.cradle.z);
     (this.beam.material as ShaderMaterial).uniforms.uA!.value = 0;
     this.root.add(this.beam);
+    const haloMat = () =>
+      new ShaderMaterial({
+        uniforms: { uA: { value: 0 }, uC: { value: new Color('#ffd79a').multiplyScalar(1.9) } },
+        transparent: true,
+        depthWrite: false,
+        side: DoubleSide,
+        blending: AdditiveBlending,
+        vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+        fragmentShader: `uniform float uA; uniform vec3 uC; varying vec2 vUv;
+          void main(){ float r = length(vUv - 0.5) * 2.0; float ring = exp(-pow((r - 0.62) / 0.07, 2.0)) + exp(-r * 4.0) * 0.25; float a = ring * smoothstep(1.0, 0.85, r) * uA; gl_FragColor = vec4(uC * a, a); }`,
+      });
+    for (const y of [2320, 1700, 1120, 480]) {
+      const r = 60 - 34 * (y / 2500);
+      const halo = new Mesh(new PlaneGeometry(r * 3.4, r * 3.4).rotateX(-Math.PI / 2), haloMat());
+      halo.position.set(this.cradle.x, y, this.cradle.z);
+      halo.frustumCulled = false;
+      this.root.add(halo);
+      this.halos.push({ mesh: halo, y });
+    }
   }
 
   update(dt: number): void {
@@ -136,10 +159,14 @@ export class Underneath extends UChapter {
     const t = this.real;
     this.time = t; // events run on real time here
     this.runEvents();
+    this.line?.reveal(smoothstep(7.4, 10.6, t));
 
     // Time eases down to 0.15, then back up for the reveal.
-    ctx.loop.timeScale = t < 15 ? damp(ctx.loop.timeScale, 0.15, 0.9, real) : damp(ctx.loop.timeScale, 1, 1.2, real);
+    ctx.loop.timeScale = t < 17 ? damp(ctx.loop.timeScale, 0.15, 0.9, real) : damp(ctx.loop.timeScale, 1, 1.2, real);
 
+    // The cradle rises with the hands; the visitor comes to rest just above the palms.
+    w.arms.cradleWorld(this.cradle);
+    this.cradle.y += 1.1;
     // The long soft curve: matching the fall speed, easing to rest in the cradle.
     const T = 7.5;
     const span = Math.max(1, this.y0 - this.cradle.y);
@@ -159,36 +186,55 @@ export class Underneath extends UChapter {
     const arms = w.arms.uniforms;
     arms.uRise.value = smoothstep(0, 6, t);
     arms.uClose.value = smoothstep(3, 9, t);
-    arms.uGlow.value = smoothstep(2, 8, t) * (1 - smoothstep(18, 26, t) * 0.5);
+    arms.uGlow.value = smoothstep(2, 8, t) * (1 - smoothstep(20, 28, t) * 0.5);
     w.sky.fogScale = 1 - smoothstep(0, 4, t) * 0.8;
-    if (t < 15) w.sky.wispScale = 1 - smoothstep(1, 6, t);
+    if (t < 17) w.sky.wispScale = 1 - smoothstep(1, 6, t);
 
-    // Camera: from the fall view down to a low three-quarter view of the cradle, then the reveal.
+    // Camera: from the fall view (the arms seen from above, rising out of the mist) out to a wide
+    // three-quarter view where both arms read in one glance, then a slow push in on the closing hands.
     const vp = v.group.position;
-    if (t < 15) {
-      const c = smoothstep(0.5, 8, t);
-      const orbit = t * 0.035;
-      const close = new Vector3(vp.x + Math.sin(0.25 + orbit) * 72, vp.y + 24, vp.z + Math.cos(0.25 + orbit) * 72);
-      const from = new Vector3(vp.x, vp.y + 6.5, vp.z + 4.2);
-      w.freePos.copy(from.lerp(close, c));
-      w.freeLook.set(vp.x, vp.y - 26 * (1 - c) + 8 * c, vp.z - 3 * (1 - c));
+    const cr = this.cradle;
+    if (t < 17) {
+      const from = this.camFrom.set(vp.x, vp.y + 6.5, vp.z + 4.2);
+      const fromLook = new Vector3(vp.x, vp.y - 26, vp.z - 3);
+      const wideK = smoothstep(1.5, 8.5, t);
+      // The push in: from the whole form down into the palm, where the hands become a landscape.
+      const closeK = smoothstep(10.8, 16.4, t);
+      const e = closeK * closeK * (3 - 2 * closeK);
+      const az = 0.04 + t * 0.008 + e * 0.75;
+      // Portrait screens are narrow: stand further back so both arms still fit.
+      const fit = innerWidth / Math.max(1, innerHeight) < 0.8 ? 1.75 : 1;
+      const R = 236 * fit * Math.pow(16 / (236 * fit), e);
+      const H = 118 * fit * Math.pow(6 / (118 * fit), e);
+      const shot = new Vector3(cr.x + Math.sin(az) * R, cr.y + H, cr.z + Math.cos(az) * R);
+      const shotLook = new Vector3(cr.x, cr.y + 6 * (1 - e) + 0.6 * e, cr.z - 92 * (1 - e) - 6 * (1 - e));
+      w.freePos.copy(from.lerp(shot, wideK));
+      w.freeLook.copy(fromLook.lerp(shotLook, wideK));
     } else {
-      const r = smoothstep(15, 27, t);
+      const r = smoothstep(17, 29, t);
       const re = r * r * (3 - 2 * r);
       w.sky.lookAltitude = 150 + re * 0; // keep the warm look of underneath
       w.sky.fogScale = 0.2 * (1 - re);
       w.sky.wispScale = 1 - re;
       arms.uLevel.value = 1 + re * 2.5;
       const far = new Vector3(2100, 1350, 2100);
-      const near = new Vector3(vp.x + Math.sin(0.25 + 15 * 0.035) * 72, vp.y + 24, vp.z + Math.cos(0.25 + 15 * 0.035) * 72);
+      const k15 = smoothstep(10.8, 16.4, 17);
+      const e15 = k15 * k15 * (3 - 2 * k15);
+      const az = 0.04 + 17 * 0.008 + e15 * 0.75;
+      const fit = innerWidth / Math.max(1, innerHeight) < 0.8 ? 1.75 : 1;
+      const R = 236 * fit * Math.pow(16 / (236 * fit), e15);
+      const near = new Vector3(cr.x + Math.sin(az) * R, cr.y + 118 * fit * Math.pow(6 / (118 * fit), e15), cr.z + Math.cos(az) * R);
       w.freePos.copy(near.lerp(far, re));
-      w.freeLook.set(vp.x, vp.y - 6 + (1150 - vp.y) * re, vp.z);
+      w.freeLook.set(cr.x, cr.y + 3 + (1150 - cr.y) * re, cr.z - 4);
       if (this.ghost) {
-        const g = smoothstep(17, 26, t);
+        const g = smoothstep(19, 28, t);
         this.ghost.geometry.setDrawRange(0, Math.floor((g * this.ghostCount) / 3) * 3);
         (this.ghost.material as ShaderMaterial).uniforms.uHead!.value = g;
       }
-      if (this.beam) (this.beam.material as ShaderMaterial).uniforms.uA!.value = smoothstep(19, 26, t) * 0.35;
+      if (this.beam) (this.beam.material as ShaderMaterial).uniforms.uA!.value = smoothstep(21, 28, t) * 0.35;
+      // Each halo lights as the ghost of the fall passes down through its layer.
+      const head = COLUMN.fallStart - smoothstep(19, 28, t) * (COLUMN.fallStart - this.cradle.y);
+      for (const hl of this.halos) (hl.mesh.material as ShaderMaterial).uniforms.uA!.value = smoothstep(hl.y + 60, hl.y - 60, head) * (0.55 + 0.45 * smoothstep(26, 30, t));
     }
   }
 }
@@ -201,10 +247,22 @@ class Curtain {
   readonly cloth: Verlet & { cols: number; rows: number };
   private readonly geo = new BufferGeometry();
   constructor(origin: [number, number, number], width: number, height: number, color: string) {
-    const cols = 6;
-    const rows = 12;
+    const cols = 10;
+    const rows = 16;
     this.cloth = createCloth(origin, width, height, cols, rows, { iterations: 5, damping: 0.97 });
-    for (let c = 0; c <= cols; c++) this.cloth.pin(c);
+    // Pleats: soft folds across the width, so the curtain hangs like cloth, not a panel.
+    for (let r = 0; r <= rows; r++) {
+      for (let c = 0; c <= cols; c++) {
+        const p = this.cloth.getPoint(r * (cols + 1) + c);
+        this.cloth.setPoint(r * (cols + 1) + c, p[0], p[1], p[2] + Math.sin((c / cols) * Math.PI * 4) * 0.1 * (0.6 + 0.4 * (r / rows)));
+      }
+    }
+    for (const k of this.cloth.constraints) {
+      const a = this.cloth.getPoint(k.a);
+      const b = this.cloth.getPoint(k.b);
+      k.rest = Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+    }
+    for (let c = 0; c <= cols; c++) this.cloth.pin(c, this.cloth.getPoint(c));
     const t0 = Math.random() * 10;
     this.cloth.wind = (x, y, _z, t) => [Math.sin(t * 0.7 + t0) * 0.3, 0, (0.6 + Math.sin(t * 0.9 + x * 2 + y + t0) * 0.6) * 1.2];
     this.geo.setAttribute('position', new BufferAttribute(this.cloth.positions, 3));
@@ -213,7 +271,7 @@ class Curtain {
     for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) idx.push(r * w + c, (r + 1) * w + c, r * w + c + 1, r * w + c + 1, (r + 1) * w + c, (r + 1) * w + c + 1);
     this.geo.setIndex(idx);
     this.geo.computeVertexNormals();
-    this.mesh = new Mesh(this.geo, new MeshStandardMaterial({ color, roughness: 0.85, side: DoubleSide, transparent: true, opacity: 0.88, emissive: new Color('#5a3a20'), emissiveIntensity: 0.25 }));
+    this.mesh = new Mesh(this.geo, new MeshStandardMaterial({ color, roughness: 0.9, side: DoubleSide, transparent: true, opacity: 0.94, emissive: new Color('#b07a46'), emissiveIntensity: 0.3 }));
     this.mesh.frustumCulled = false;
     this.mesh.castShadow = true;
   }
@@ -263,7 +321,7 @@ export class Dwelling extends UChapter {
     base.position.set(0, y, 0);
     base.add(islandTop(R, 41, m.grass), islandUnderside(R * 0.95, 41, m.rock), islandDetail(R * 0.4, 42, m));
     this.root.add(base);
-    const warm = new MeshStandardMaterial({ color: '#efdcc0', roughness: 0.7, emissive: new Color('#3a2414'), emissiveIntensity: 0.2 });
+    const warm = new MeshStandardMaterial({ color: '#efdcc0', roughness: 0.7, emissive: new Color('#6a4424'), emissiveIntensity: 0.28 });
     const floor = new Mesh(new CylinderGeometry(5.9, 5.9, 0.16, 48), warm);
     floor.position.set(0, y + 0.08, 0);
     floor.receiveShadow = true;
@@ -340,10 +398,13 @@ export class Dwelling extends UChapter {
     );
     this.flame.frustumCulled = false;
     hearth.add(this.flame);
-    this.fireLight = new PointLight('#ffb070', 6, 9, 1.5);
+    this.fireLight = new PointLight('#ffb070', 9, 13, 1.4);
     this.fireLight.position.set(0, 1, 0);
     hearth.add(this.fireLight);
     add(hearth, 2.6);
+    const room = new PointLight('#ffd7a0', 5, 12, 1.2);
+    room.position.set(0, y + 3.6, 0);
+    this.root.add(room);
     const table = new Group();
     table.position.set(3.1, y, -0.4);
     const top = new Mesh(new BoxGeometry(1.8, 0.1, 1.0), new MeshStandardMaterial({ color: '#9a7458', roughness: 0.7 }));
@@ -386,12 +447,14 @@ export class Dwelling extends UChapter {
       { name: 'window', pos: new Vector3(0, y, -4.6), done: false },
     ];
     w.platforms = [{ x: 0, z: 0, y, r: R - 0.3 }, { x: 0, z: 9.5, y, r: 0, hx: 1.1, hz: 3.4 }];
-    const path = new Mesh(new BoxGeometry(2.2, 0.3, 6.8), m.stone);
+    const path = new Mesh(new RoundedBoxGeometry(2.2, 0.3, 6.8, 3, 0.12), m.bridge);
     path.position.set(0, y - 0.15, 9.5);
     path.receiveShadow = true;
     this.root.add(path);
     w.camMode = 'ground';
-    w.camDistance = 1.15;
+    w.camDistance = 1.3;
+    w.lookLift = 1.4;
+    w.lookSide = 0.8;
     w.yaw = 0.25;
     w.visitor.fallPose = 0;
     w.visitor.lean = 0;
@@ -425,7 +488,7 @@ export class Dwelling extends UChapter {
     this.walk(dt);
     for (const c of this.curtains) c.update(dt);
     (this.flame.material as ShaderMaterial).uniforms.uTime!.value = this.time;
-    this.fireLight.intensity = 5 + Math.sin(this.time * 13) * 0.8 + Math.sin(this.time * 7.3) * 0.6;
+    this.fireLight.intensity = 8 + Math.sin(this.time * 13) * 1.1 + Math.sin(this.time * 7.3) * 0.8;
     // The dwelling rises out of the light.
     for (const p of this.parts) {
       const k = smoothstep(p.delay, p.delay + 1.6, this.time);

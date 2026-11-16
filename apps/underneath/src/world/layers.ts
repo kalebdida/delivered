@@ -30,8 +30,8 @@ export interface LayerLook {
 }
 
 export const LOOKS: Record<LayerName, LayerLook> = {
-  heights: { zenith: '#5a86b8', horizon: '#f2b866', ground: '#f4ebdd', fog: '#f1d2a4', fogDensity: 0.0016, exposure: 1.05, saturation: 1.08, stars: 0, sunIntensity: 5 },
-  storm: { zenith: '#1a1f40', horizon: '#3a4278', ground: '#1b1f3a', fog: '#30386a', fogDensity: 0.005, exposure: 1.1, saturation: 0.75, stars: 0, sunIntensity: 0 },
+  heights: { zenith: '#4f7cb2', horizon: '#f2b866', ground: '#f4ebdd', fog: '#f1d2a4', fogDensity: 0.0011, exposure: 1.02, saturation: 1.1, stars: 0, sunIntensity: 5 },
+  storm: { zenith: '#20264a', horizon: '#414a84', ground: '#1b1f3a', fog: '#353e74', fogDensity: 0.0042, exposure: 1.18, saturation: 0.8, stars: 0, sunIntensity: 0 },
   night: { zenith: '#05071a', horizon: '#0f1636', ground: '#0a0d1f', fog: '#0c112b', fogDensity: 0.0006, exposure: 1.1, saturation: 0.95, stars: 1, sunIntensity: 0 },
   fog: { zenith: '#bdbab6', horizon: '#c9c6c2', ground: '#c9c6c2', fog: '#c9c6c2', fogDensity: 0.03, exposure: 0.95, saturation: 0.55, stars: 0, sunIntensity: 0 },
   underneath: { zenith: '#10142e', horizon: '#3e2c4a', ground: '#2a1c2e', fog: '#241c36', fogDensity: 0.0014, exposure: 1.05, saturation: 1.1, stars: 0.7, sunIntensity: 0 },
@@ -39,7 +39,7 @@ export const LOOKS: Record<LayerName, LayerLook> = {
 
 /** Grades per layer for the LUT (baked when the dominant layer changes). */
 export const GRADES_BY_LAYER: Record<LayerName, { shadows: string; highlights: string; tintStrength: number; contrast: number; saturation: number; gamma?: number }> = {
-  heights: { shadows: '#3a3560', highlights: '#ffe2a8', tintStrength: 0.38, contrast: 1.04, saturation: 1.12, gamma: 0.96 },
+  heights: { shadows: '#3a3560', highlights: '#ffe2a8', tintStrength: 0.38, contrast: 1.1, saturation: 1.12, gamma: 0.98 },
   storm: { shadows: '#141a3c', highlights: '#c9d4ff', tintStrength: 0.45, contrast: 1.16, saturation: 0.7 },
   night: { shadows: '#0a1240', highlights: '#b9c8ff', tintStrength: 0.5, contrast: 1.08, saturation: 0.95 },
   fog: { shadows: '#6f6c72', highlights: '#f0ece6', tintStrength: 0.3, contrast: 0.82, saturation: 0.6, gamma: 0.95 },

@@ -298,7 +298,7 @@ export class Fall extends FallChapter {
     const { ctx } = this;
     const fall = this.runner.fall;
     this.runEvents();
-    if (this.shotStrike === 0 && this.time > this.keyMomentAt - 0.35) {
+    if (this.shotStrike === 0 && this.time > this.keyMomentAt - 0.15) {
       this.shotStrike = 1;
       this.w.sky.lightning.soon = true;
     }

@@ -368,6 +368,10 @@ export class GiveWay extends UChapter {
     w.platforms = this.isles.map((i) => i.platform);
     w.camMode = 'ground';
     w.yaw = 0;
+    // Frame the course ahead: the figure low and left, the islands running into the sun.
+    w.camDistance = 1.2;
+    w.lookLift = 0.9;
+    w.lookSide = 1.3;
     w.visitor.fallPose = 0;
     w.visitor.lean = 0;
     w.visitor.motion.teleport(0, y0, 1.5, this.isles[0]!.platform);

@@ -140,8 +140,8 @@ export class World {
       // Down: above and behind, looking into the depths. Up: below, looking past the visitor at the sky.
       // Looking up the camera drops below and to the side, so the figure reads in profile against
       // the sky and the rider is high in the frame.
-      this.camGoal.set(u * 2.6, 5.5 - u * 9.2, 2.4 + u * 4.4).multiplyScalar(tall ? 1.2 : 1);
-      this.lookGoal.set(-u * 1.5, -20 + u * 44, -6 - u * 14);
+      this.camGoal.set(u * 5.2, 5.5 - u * 8.4, 2.4 + u * 2.6).multiplyScalar(tall ? 1.2 : 1);
+      this.lookGoal.set(-u * 3.5, -20 + u * 44, -6 - u * 14);
     }
     const k = this.camMode === 'fall' ? 4 : 5;
     this.camOff.set(damp(this.camOff.x, this.camGoal.x, k, dt), damp(this.camOff.y, this.camGoal.y, k, dt), damp(this.camOff.z, this.camGoal.z, k, dt));

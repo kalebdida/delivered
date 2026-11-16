@@ -53,10 +53,51 @@ cantillation removed, vowel points kept.
 - **The end card's support line** is appended under the core EndCard (it has no slot for it yet);
   the About panel line waits for the core (CORE_REQUESTS.md #2).
 
+## Beauty pass (branch `beauty/underneath`)
+- **The arms are a sculpted mesh first, particles second.** Each arm is one swept tube from a root in
+  the mist to the knuckles, with four fingers and a thumb as jointed tubes. The mesh is built twice
+  (open and closed, same topology) and blended on the GPU by `uClose`, so the fingers curl and the
+  palms roll into a bowl with no per-frame CPU work. The shading is light, not a lit object: an inner
+  (subsurface) glow where the form is thick, a fresnel rim, slow bands of light flowing toward the
+  hands, a warm pool in the palms around the visitor, and aerial haze into a floor of mist the arms
+  rise out of. The roots dissolve below the mist, so there are no shoulders and no body.
+- **Ribbons are wound on the surface, not free Verlet strips.** Free strips read as loose lines next
+  to a solid form; helical bands that follow the mesh (in both poses) read as light flowing along it.
+  The Verlet ribbons are gone from the arms; Verlet is still used for the cloak, ropes and curtains.
+- **Particles are sampled on the mesh** (area-weighted, hands weighted up), offset just above the
+  skin, and drift along the surface toward the hands. Counts still come from the tier.
+- **The hands are 1.4× the earlier size and the reach is shorter**, so the silhouette reads in one
+  glance: two cupped hands with the arms receding behind them into the mist. The visitor rests where
+  the two palms meet; the cradle follows the hands as they rise.
+- **CH5 camera:** from the fall view (the arms seen from above) out to a wide three-quarter view
+  (the key moment), then a slow push down into the palm, where the hands become a landscape around
+  the small figure. The reveal starts two seconds later (at 17 s) to hold that close-up.
+- **The CH5 line was never revealed** (the words were created and left invisible). It now reveals
+  word by word from 7.4 s, and its scrim sits behind the words only instead of dimming the frame.
+- **A far cloudscape on a dome (`world/cloudscape.ts`)** on every tier: high cirrus and altocumulus,
+  cumulus banks on the horizon with silver linings toward the sun, an endless cloud sea below (its
+  underside above once the visitor has fallen through), and in the Storm a wall of indigo cloud with
+  billowed structure. Near clouds (billboards, or the raymarched sea) draw in front of it.
+- **Raymarched high-tier clouds are in.** On high tier the cloud sea is the core `CloudField` in
+  raymarch mode (self-shadowing, silver lining, aerial haze) as a backdrop, with the billboard sea
+  kept in front of it for flying through, and the dome's sea beyond its extent.
+- **Lightning lights the cloud from inside.** Each strike lands inside the view, lights the dome's
+  walls (broken up by their own billows) and the near storm billboards (thick middles first), draws a
+  forked bolt half hidden in the cloud, and catches the visitor's rim. The glow decays over about a
+  second with a soft flicker instead of snapping off; every strike still goes through the flash
+  limiter. The screenshot hook (`?shot`) times one strike to the storm's key moment.
+- **The sun moved to azimuth 2.83** so it sits just right of the island course: CH1 and CH2 are now
+  backlit, with god rays (medium and high tiers) from a sun glow occluded by the islands.
+- **The visitor has a rim light** (fresnel, on the side facing the layer's light: the low sun, cool
+  sky light in the storm and night, the arms' light from below, every lightning strike), a hood, and
+  an A-line cloak shaped around the body (rest lengths from that shape, a torso capsule to keep it
+  out of the body) instead of a flat sheet.
+- **CH1 opens wide** (figure on the left third, sun ahead and right, more sky) and settles into the
+  play camera when the visitor first moves or after 10 s. The movement hint waits until 8 s.
+- **The CH7 swing arch now faces the ledge.** Seen edge-on against the swing's beam it formed a
+  glowing cross; the room never uses a cross as decoration (DESIGN.md §10).
+
 ## What this run did not do
-- **Raymarched high-tier clouds** were not added. The core `CloudField` raymarch mode is a backdrop,
-  and the visitor flies through the cloud sea, so it needs the billboard pass kept alongside it; that
-  was left for a later pass to keep this run's scope.
 - **Milestones landed as one commit** (M1 to M5) after the whole room ran end to end, then a review
   commit, instead of one commit per milestone.
 - **Tested only in headless Chromium with SwiftShader.** No real GPU, no Firefox, Safari or Android

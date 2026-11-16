@@ -31,6 +31,8 @@ function withRim<M extends Material>(m: M): M {
           float fr = pow(1.0 - clamp(abs(dot(normal, vv)), 0.0, 1.0), 1.5);
           float side = clamp(dot(normal, uRimDir) * 0.9 + 0.4, 0.0, 1.0);
           totalEmissiveRadiance += uRimColor * fr * side * uRim;
+          // A little self-light so the figure never turns into a black hole on its shadowed side.
+          totalEmissiveRadiance += diffuseColor.rgb * 0.16;
         }`,
       );
   };
@@ -253,7 +255,6 @@ export class Visitor {
     // A dusk-blue cloak: the complement of the gold, never a black hole against the sun.
     const cloth = withRim(new MeshStandardMaterial({ color: '#646d98', roughness: 0.7, side: DoubleSide, emissive: new Color('#36385e'), emissiveIntensity: 0.75 }));
     const skin = withRim(new MeshStandardMaterial({ color: '#efe3d0', roughness: 0.6, emissive: new Color('#f5c76b'), emissiveIntensity: 0.12 }));
-    const dark = withRim(new MeshStandardMaterial({ color: '#4c4c72', roughness: 0.85, emissive: new Color('#2a2a48'), emissiveIntensity: 0.6 }));
 
     const torso = new Mesh(new CapsuleGeometry(0.2, 0.5, 4, 12), cloth);
     torso.position.y = 0.95;
@@ -267,7 +268,7 @@ export class Visitor {
     this.core = new Mesh(new SphereGeometry(0.07, 12, 8), this.coreMat);
     this.core.position.set(0, 1.08, 0.17);
     for (const side of [-1, 1]) {
-      const leg = new Mesh(new CapsuleGeometry(0.075, 0.5, 3, 8), dark);
+      const leg = new Mesh(new CapsuleGeometry(0.075, 0.5, 3, 8), cloth);
       leg.position.set(side * 0.1, 0.36, 0);
       this.legs.push(leg);
       this.body.add(leg);

@@ -19,9 +19,10 @@ when the dominant layer changes.
 ## Clouds per tier
 - **All tiers (first):** soft billboard `CloudField`s for the cloud sea and the storm walls, plus a
   streaming wisp layer of instanced billboards that recycles around the camera so the fall has
-  speed. Counts come from `quality.budget`.
-- **High tier (last, if time allows):** the cloud sea switches to the core raymarched `CloudField`
-  as a backdrop; the billboards stay for flying through.
+  speed. Counts come from `quality.budget`. Behind them, a cloudscape dome (cirrus, horizon banks,
+  the endless sea, the Storm's walls lit by lightning) on every tier.
+- **High tier:** the cloud sea is also the core raymarched `CloudField` as a backdrop; the
+  billboards stay in front of it for flying through.
 
 ## The fall (CH3 + CH4), about 90 s
 | t (s) | Altitude | Beat |
